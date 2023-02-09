@@ -1,5 +1,6 @@
 import sys
 
+from .rocketsim import *
 from .rocketsim import sim
 
 __doc__ = rocketsim.__doc__

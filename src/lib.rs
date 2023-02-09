@@ -1,5 +1,7 @@
+mod python;
+
 use pyo3::prelude::*;
-use rocketsim_rs::{autocxx::prelude::*, cxx::UniquePtr, sim as csim};
+use python::*;
 
 macro_rules! pynamedmodule {
     (doc: $doc:literal, name: $name:tt, funcs: [$($func_name:path),*], classes: [$($class_name:ident),*], submodules: [$($submodule_name:ident),*]) => {
@@ -16,38 +18,11 @@ macro_rules! pynamedmodule {
     };
 }
 
-#[pyclass]
-#[derive(Clone, Copy, Debug, Default)]
-enum GameMode {
-    #[default]
-    Soccar,
-}
-
-impl From<GameMode> for csim::arena::GameMode {
-    fn from(gamemode: GameMode) -> Self {
-        match gamemode {
-            GameMode::Soccar => Self::SOCCAR,
-        }
-    }
-}
-
-#[pyclass(unsendable)]
-#[repr(transparent)]
-struct Arena(UniquePtr<csim::arena::Arena>);
-
-#[pymethods]
-impl Arena {
-    #[new]
-    fn __new__(gamemode: GameMode, tick_rate: f32) -> Self {
-        Self(csim::arena::Arena::new(gamemode.into(), tick_rate).within_unique_ptr())
-    }
-}
-
 pynamedmodule! {
     doc: "",
     name: sim,
     funcs: [],
-    classes: [Arena, GameMode],
+    classes: [Arena, GameMode, Team, CarConfig, Car],
     submodules: []
 }
 
@@ -55,6 +30,6 @@ pynamedmodule! {
     doc: "",
     name: rocketsim,
     funcs: [],
-    classes: [],
+    classes: [Vec3],
     submodules: [sim]
 }
