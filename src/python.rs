@@ -1,4 +1,4 @@
-use pyo3::{exceptions::PyIndexError, prelude::*};
+use pyo3::{exceptions::PyIndexError, prelude::*, types::PyTuple};
 use rocketsim_rs::{autocxx::prelude::*, cxx::UniquePtr, sim as csim, Angle as CAngle, Vec3 as CVec3};
 use std::fmt;
 
@@ -134,6 +134,118 @@ impl CarConfig {
 
 #[pyclass(get_all, set_all, module = "rocketsim.sim")]
 #[derive(Clone, Copy, Debug, Default)]
+pub struct CarControls {
+    throttle: f32,
+    steer: f32,
+    pitch: f32,
+    yaw: f32,
+    roll: f32,
+    jump: bool,
+    boost: bool,
+    handbrake: bool,
+}
+
+impl From<csim::CarControls> for CarControls {
+    #[inline]
+    fn from(controls: csim::CarControls) -> Self {
+        Self {
+            throttle: controls.throttle,
+            steer: controls.steer,
+            pitch: controls.pitch,
+            yaw: controls.yaw,
+            roll: controls.roll,
+            jump: controls.jump,
+            boost: controls.boost,
+            handbrake: controls.handbrake,
+        }
+    }
+}
+
+impl From<&CarControls> for csim::CarControls {
+    #[inline]
+    fn from(controls: &CarControls) -> Self {
+        Self {
+            throttle: controls.throttle,
+            steer: controls.steer,
+            pitch: controls.pitch,
+            yaw: controls.yaw,
+            roll: controls.roll,
+            jump: controls.jump,
+            boost: controls.boost,
+            handbrake: controls.handbrake,
+        }
+    }
+}
+
+impl From<CarControls> for csim::CarControls {
+    #[inline]
+    fn from(controls: CarControls) -> Self {
+        Self {
+            throttle: controls.throttle,
+            steer: controls.steer,
+            pitch: controls.pitch,
+            yaw: controls.yaw,
+            roll: controls.roll,
+            jump: controls.jump,
+            boost: controls.boost,
+            handbrake: controls.handbrake,
+        }
+    }
+}
+
+#[pymethods]
+impl CarControls {
+    const NAMES: [&str; 8] = ["throttle", "steer", "pitch", "yaw", "roll", "jump", "boost", "handbrake"];
+
+    #[new]
+    #[pyo3(signature = (*args, **kwargs))]
+    fn new(args: &PyTuple, kwargs: Option<&PyAny>) -> Self {
+        if let Ok(args) = args.get_item(0).and_then(PyAny::extract) {
+            return args;
+        }
+
+        let mut vec = [None; Self::NAMES.len()];
+
+        if let Ok(args) = args.get_item(0).and_then(PyAny::extract::<Vec<f32>>) {
+            vec.iter_mut().zip(args.into_iter()).for_each(|(a, b)| *a = Some(b));
+        } else if let Ok(args) = args.extract::<Vec<f32>>() {
+            vec.iter_mut().zip(args.into_iter()).for_each(|(a, b)| *a = Some(b));
+        } else {
+            for (a, b) in vec.iter_mut().zip(args.into_iter()) {
+                if let Ok(x) = b.extract() {
+                    *a = Some(x);
+                }
+            }
+        }
+
+        if let Some(kwargs) = kwargs {
+            for (a, b) in vec.iter_mut().zip(Self::NAMES.into_iter()) {
+                if let Ok(x) = kwargs.get_item(b).and_then(PyAny::extract) {
+                    *a = Some(x);
+                }
+            }
+        }
+
+        Self {
+            throttle: vec[0].unwrap_or_default(),
+            steer: vec[1].unwrap_or_default(),
+            pitch: vec[2].unwrap_or_default(),
+            yaw: vec[3].unwrap_or_default(),
+            roll: vec[4].unwrap_or_default(),
+            jump: vec[5].unwrap_or_default() as u8 != 0,
+            boost: vec[6].unwrap_or_default() as u8 != 0,
+            handbrake: vec[7].unwrap_or_default() as u8 != 0,
+        }
+    }
+
+    #[inline]
+    fn __str__(&self) -> String {
+        format!("{self:?}")
+    }
+}
+
+#[pyclass(get_all, set_all, module = "rocketsim.sim")]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Angle {
     pitch: f32,
     yaw: f32,
@@ -166,11 +278,7 @@ impl From<Angle> for CAngle {
 impl Angle {
     #[new]
     fn __new__(pitch: f32, yaw: f32, roll: f32) -> Self {
-        Self {
-            pitch,
-            yaw,
-            roll,
-        }
+        Self { pitch, yaw, roll }
     }
 
     #[inline]
@@ -236,6 +344,7 @@ impl fmt::Debug for Car {
             .field("vel", &self.0.vel)
             .field("angles", &self.0.angles)
             .field("angvel", &self.0.angvel)
+            .field("last_rel_dodge_torque", &self.0.lastRelDodgeTorque)
             .field("boost", &self.0.boost)
             .field("is_on_ground", &self.0.isOnGround)
             .field("is_supersonic", &self.0.isSupersonic)
@@ -243,6 +352,11 @@ impl fmt::Debug for Car {
             .field("has_jumped", &self.0.hasJumped)
             .field("has_double_jumped", &self.0.hasDoubleJumped)
             .field("has_flipped", &self.0.hasFlipped)
+            .field("jump_timer", &self.0.jumpTimer)
+            .field("flip_timer", &self.0.flipTimer)
+            .field("air_time_space_jump", &self.0.airTimeSpaceJump)
+            .field("handbrake_val", &self.0.handbrakeVal)
+            .field("last_controls", &self.0.lastControls)
             .finish()
     }
 }
@@ -293,6 +407,17 @@ impl Car {
         self.0.angvel = angvel.into();
     }
 
+    #[inline]
+    fn get_last_rel_dodge_torque(&self) -> Vec3 {
+        self.0.lastRelDodgeTorque.clone().into()
+    }
+
+    #[setter(last_rel_dodge_torque)]
+    #[inline]
+    fn set_last_rel_dodge_torque(&mut self, last_rel_dodge_torque: Vec3) {
+        self.0.lastRelDodgeTorque = last_rel_dodge_torque.into();
+    }
+
     #[getter(boost)]
     #[inline]
     fn get_boost(&self) -> f32 {
@@ -317,10 +442,22 @@ impl Car {
         self.0.isSupersonic
     }
 
+    #[setter(is_supersonic)]
+    #[inline]
+    fn set_is_supersonic(&mut self, is_supersonic: bool) {
+        self.0.pin_mut().isSupersonic = is_supersonic;
+    }
+
     #[getter(is_jumping)]
     #[inline]
     fn is_jumping(&self) -> bool {
         self.0.isJumping
+    }
+
+    #[setter(is_jumping)]
+    #[inline]
+    fn set_is_jumping(&mut self, is_jumping: bool) {
+        self.0.isJumping = is_jumping;
     }
 
     #[getter(has_jumped)]
@@ -329,16 +466,94 @@ impl Car {
         self.0.hasJumped
     }
 
+    #[setter(has_jumped)]
+    #[inline]
+    fn set_has_jumped(&mut self, has_jumped: bool) {
+        self.0.hasJumped = has_jumped;
+    }
+
     #[getter(has_double_jumped)]
     #[inline]
     fn has_double_jumped(&self) -> bool {
         self.0.hasDoubleJumped
     }
 
+    #[setter(has_double_jumped)]
+    #[inline]
+    fn set_has_double_jumped(&mut self, has_double_jumped: bool) {
+        self.0.hasDoubleJumped = has_double_jumped;
+    }
+
     #[getter(has_flipped)]
     #[inline]
     fn has_flipped(&self) -> bool {
         self.0.hasFlipped
+    }
+
+    #[setter(has_flipped)]
+    #[inline]
+    fn set_has_flipped(&mut self, has_flipped: bool) {
+        self.0.hasFlipped = has_flipped;
+    }
+
+    #[getter(jump_timer)]
+    #[inline]
+    fn get_jump_timer(&self) -> f32 {
+        self.0.jumpTimer
+    }
+
+    #[setter(jump_timer)]
+    #[inline]
+    fn set_jump_timer(&mut self, jump_timer: f32) {
+        self.0.pin_mut().jumpTimer = jump_timer;
+    }
+
+    #[getter(flip_timer)]
+    #[inline]
+    fn get_flip_timer(&self) -> f32 {
+        self.0.flipTimer
+    }
+
+    #[setter(flip_timer)]
+    #[inline]
+    fn set_flip_timer(&mut self, flip_timer: f32) {
+        self.0.pin_mut().flipTimer = flip_timer;
+    }
+
+    #[getter(air_time_space_jump)]
+    #[inline]
+    fn get_air_time_space_jump(&self) -> f32 {
+        self.0.airTimeSpaceJump
+    }
+
+    #[setter(air_time_space_jump)]
+    #[inline]
+    fn set_air_time_space_jump(&mut self, air_time_space_jump: f32) {
+        self.0.pin_mut().airTimeSpaceJump = air_time_space_jump;
+    }
+
+    #[getter(handbrake_val)]
+    #[inline]
+    fn get_handbrake_val(&self) -> f32 {
+        self.0.handbrakeVal
+    }
+
+    #[setter(handbrake_val)]
+    #[inline]
+    fn set_handbrake_val(&mut self, handbrake_val: f32) {
+        self.0.pin_mut().handbrakeVal = handbrake_val;
+    }
+
+    #[getter(last_controls)]
+    #[inline]
+    fn get_last_controls(&self) -> CarControls {
+        self.0.lastControls.into()
+    }
+
+    #[setter(last_controls)]
+    #[inline]
+    fn set_last_controls(&mut self, last_controls: CarControls) {
+        self.0.lastControls = last_controls.into();
     }
 
     #[inline]
@@ -386,6 +601,11 @@ impl Arena {
     #[inline]
     fn add_car(&mut self, team: Team, config: &CarConfig) -> u32 {
         self.0.pin_mut().add_car(team.into(), config.into())
+    }
+
+    #[inline]
+    fn set_car_controls(&mut self, id: u32, controls: &CarControls) -> PyResult<()> {
+        self.0.pin_mut().set_car_controls(id, &controls.into()).map_err(|e| PyIndexError::new_err(e.to_string()))
     }
 
     #[inline]

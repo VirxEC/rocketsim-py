@@ -1,7 +1,7 @@
 from time import time_ns
 
 from rocketsim import Angle, Vec3
-from rocketsim.sim import Arena, CarConfig, GameMode, Team
+from rocketsim.sim import Arena, CarConfig, GameMode, Team, CarControls
 
 if __name__ == "__main__":
     arena = Arena(GameMode.Soccar)
@@ -20,8 +20,10 @@ if __name__ == "__main__":
     car.angles = Angle(0, 1.1, 0)
     car.boost = 100
     arena.set_car(car_id, car)
-    print(arena.get_car(car_id))
     print("Set car state")
+
+    arena.set_car_controls(car_id, CarControls(boost=True))
+    print("Set car controls")
 
     ticks = 7200
 

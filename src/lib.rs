@@ -22,7 +22,7 @@ pynamedmodule! {
     doc: "",
     name: sim,
     funcs: [],
-    classes: [Arena, GameMode, Team, CarConfig, Car, Ball],
+    classes: [Arena, GameMode, Team, CarConfig, Car, Ball, CarControls],
     submodules: []
 }
 
