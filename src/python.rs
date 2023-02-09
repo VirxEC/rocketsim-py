@@ -88,47 +88,27 @@ impl Ball {
     }
 }
 
-#[pyclass(unsendable, module = "rocketsim.sim")]
-#[repr(transparent)]
-pub struct CarConfig(&'static csim::car::CarConfig);
+#[pyclass(module = "rocketsim.sim")]
+pub enum CarConfig {
+    Octane,
+    Dominus,
+    Plank,
+    Breakout,
+    Hybrid,
+    Merc,
+}
 
 impl From<&CarConfig> for &'static csim::car::CarConfig {
     #[inline]
     fn from(config: &CarConfig) -> Self {
-        config.0
-    }
-}
-
-#[pymethods]
-impl CarConfig {
-    #[staticmethod]
-    fn octane() -> Self {
-        Self(csim::car::CarConfig::octane())
-    }
-
-    #[staticmethod]
-    fn dominus() -> Self {
-        Self(csim::car::CarConfig::dominus())
-    }
-
-    #[staticmethod]
-    fn plank() -> Self {
-        Self(csim::car::CarConfig::plank())
-    }
-
-    #[staticmethod]
-    fn breakout() -> Self {
-        Self(csim::car::CarConfig::breakout())
-    }
-
-    #[staticmethod]
-    fn hybrid() -> Self {
-        Self(csim::car::CarConfig::hybrid())
-    }
-
-    #[staticmethod]
-    fn merc() -> Self {
-        Self(csim::car::CarConfig::merc())
+        match config {
+            CarConfig::Octane => csim::car::CarConfig::octane(),
+            CarConfig::Dominus => csim::car::CarConfig::dominus(),
+            CarConfig::Plank => csim::car::CarConfig::plank(),
+            CarConfig::Breakout => csim::car::CarConfig::breakout(),
+            CarConfig::Hybrid => csim::car::CarConfig::hybrid(),
+            CarConfig::Merc => csim::car::CarConfig::merc(),
+        }
     }
 }
 

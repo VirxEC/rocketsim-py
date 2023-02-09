@@ -60,24 +60,13 @@ class Car:
     def get_angvel(self) -> Vec3: ...
     def get_last_rel_dodge_torque(self) -> Vec3: ...
 
-class CarConfig:
-    @staticmethod
-    def octane() -> CarConfig: ...
-
-    @staticmethod
-    def dominus() -> CarConfig: ...
-
-    @staticmethod
-    def plank() -> CarConfig: ...
-
-    @staticmethod
-    def breakout() -> CarConfig: ...
-
-    @staticmethod
-    def hybrid() -> CarConfig: ...
-
-    @staticmethod
-    def merc() -> CarConfig: ...
+class CarConfig(Enum):
+    Octane = 0
+    Dominus = 1
+    Plank = 2
+    Breakout = 3
+    Hybrid = 4
+    Merc = 5
 
 class Arena:
     ball: Ball

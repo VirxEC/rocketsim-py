@@ -12,7 +12,7 @@ if __name__ == "__main__":
     arena.ball = ball
     print("Set ball state")
 
-    car_id = arena.add_car(Team.Blue, CarConfig.octane())
+    car_id = arena.add_car(Team.Blue, CarConfig.Octane)
     print(f"ID of added car: {car_id}")
 
     car = arena.get_car(car_id)
