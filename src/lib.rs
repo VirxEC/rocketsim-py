@@ -22,7 +22,7 @@ pynamedmodule! {
     doc: "",
     name: sim,
     funcs: [],
-    classes: [Arena, GameMode, Team, CarConfig, Car],
+    classes: [Arena, GameMode, Team, CarConfig, Car, Ball],
     submodules: []
 }
 
@@ -30,6 +30,6 @@ pynamedmodule! {
     doc: "",
     name: rocketsim,
     funcs: [],
-    classes: [Vec3],
+    classes: [Vec3, Angle],
     submodules: [sim]
 }

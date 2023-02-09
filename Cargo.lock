@@ -766,7 +766,7 @@ dependencies = [
 [[package]]
 name = "rocketsim_rs"
 version = "0.1.0"
-source = "git+https://github.com/VirxEC/rocketsim-rs.git#9da0763dd85e8a73142e1433dd6660fd5a7db4e2"
+source = "git+https://github.com/VirxEC/rocketsim-rs.git#c207c9fcba03d0aa2a5c9877f73e8479a050a102"
 dependencies = [
  "autocxx",
  "autocxx-build",

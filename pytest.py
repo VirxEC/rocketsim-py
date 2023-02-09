@@ -1,36 +1,35 @@
 from time import time_ns
 
-from rocketsim import Vec3
+from rocketsim import Angle, Vec3
 from rocketsim.sim import Arena, CarConfig, GameMode, Team
 
-arena = Arena(GameMode.Soccar)
-arena = Arena(GameMode.Soccar)
-arena = Arena(GameMode.Soccar)
-print(f"Arena tick rate: {arena.get_tick_rate()}")
+if __name__ == "__main__":
+    arena = Arena(GameMode.Soccar)
+    print(f"Arena tick rate: {arena.get_tick_rate()}")
 
-ball = arena.get_ball()
-ball.pos = ball.get_pos().with_z(1500)
-arena.ball = ball
-print("Set ball state")
+    ball = arena.get_ball()
+    ball.pos = ball.get_pos().with_z(1500)
+    arena.ball = ball
+    print("Set ball state")
 
-car_id = arena.add_car(Team.Blue, CarConfig.octane())
-print(f"ID of added car: {car_id}")
+    car_id = arena.add_car(Team.Blue, CarConfig.octane())
+    print(f"ID of added car: {car_id}")
 
-car = arena.get_car(car_id)
-car.pos = Vec3(0, 0, 1050)
-car.boost = 100
-print(car)
-arena.set_car(car_id, car)
-print(arena.get_car(car_id))
-print("Set car state")
+    car = arena.get_car(car_id)
+    car.pos = Vec3(0, 0, 1050)
+    car.angles = Angle(0, 1.1, 0)
+    car.boost = 100
+    arena.set_car(car_id, car)
+    print(arena.get_car(car_id))
+    print("Set car state")
 
-ticks = 7200
+    ticks = 7200
 
-start_time = time_ns()
-arena.step(ticks)
-end_time = time_ns()
+    start_time = time_ns()
+    arena.step(ticks)
+    end_time = time_ns()
 
-print(f"Simulated {ticks / 120}s of game time in {(end_time - start_time) / 1e6}ms real time")
+    print(f"Simulated {ticks / 120}s of game time in {(end_time - start_time) / 1e6}ms real time")
 
-print(arena.get_car(car_id))
-print(arena.get_ball())
+    print(arena.get_car(car_id))
+    print(arena.get_ball())

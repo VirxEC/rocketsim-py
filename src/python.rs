@@ -47,9 +47,9 @@ impl From<&csim::ball::BallState> for Ball {
     #[inline]
     fn from(ball: &csim::ball::BallState) -> Self {
         Self {
-            pos: ball.pos().into(),
-            vel: ball.vel().into(),
-            angvel: ball.angvel().into(),
+            pos: ball.pos.clone().into(),
+            vel: ball.vel.clone().into(),
+            angvel: ball.angvel.clone().into(),
         }
     }
 }
@@ -58,9 +58,9 @@ impl From<UniquePtr<csim::ball::BallState>> for Ball {
     #[inline]
     fn from(ball: UniquePtr<csim::ball::BallState>) -> Self {
         Self {
-            pos: ball.pos().into(),
-            vel: ball.vel().into(),
-            angvel: ball.angvel().into(),
+            pos: ball.pos.clone().into(),
+            vel: ball.vel.clone().into(),
+            angvel: ball.angvel.clone().into(),
         }
     }
 }
@@ -140,9 +140,9 @@ pub struct Angle {
     roll: f32,
 }
 
-impl From<&CAngle> for Angle {
+impl From<CAngle> for Angle {
     #[inline]
-    fn from(angles: &CAngle) -> Self {
+    fn from(angles: CAngle) -> Self {
         Self {
             pitch: angles.pitch,
             yaw: angles.yaw,
@@ -159,6 +159,55 @@ impl From<Angle> for CAngle {
             yaw: angles.yaw,
             roll: angles.roll,
         }
+    }
+}
+
+#[pymethods]
+impl Angle {
+    #[new]
+    fn __new__(pitch: f32, yaw: f32, roll: f32) -> Self {
+        Self {
+            pitch,
+            yaw,
+            roll,
+        }
+    }
+
+    #[inline]
+    fn with_pitch(&self, pitch: f32) -> Self {
+        Self {
+            pitch,
+            yaw: self.yaw,
+            roll: self.roll,
+        }
+    }
+
+    #[inline]
+    fn with_yaw(&self, yaw: f32) -> Self {
+        Self {
+            pitch: self.pitch,
+            yaw,
+            roll: self.roll,
+        }
+    }
+
+    #[inline]
+    fn with_roll(&self, roll: f32) -> Self {
+        Self {
+            pitch: self.pitch,
+            yaw: self.yaw,
+            roll,
+        }
+    }
+
+    #[inline]
+    fn __str__(&self) -> String {
+        format!("{self:?}")
+    }
+
+    #[inline]
+    fn __repr__(&self) -> String {
+        format!("Angle({}, {}, {})", self.pitch, self.yaw, self.roll)
     }
 }
 
@@ -183,10 +232,10 @@ impl<'a> From<&'a Car> for &'a csim::car::CarState {
 impl fmt::Debug for Car {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Car")
-            .field("pos", self.0.pos())
-            .field("vel", self.0.vel())
+            .field("pos", &self.0.pos)
+            .field("vel", &self.0.vel)
             .field("angles", &self.0.angles)
-            .field("angvel", self.0.angvel())
+            .field("angvel", &self.0.angvel)
             .field("boost", &self.0.boost)
             .field("is_on_ground", &self.0.isOnGround)
             .field("is_supersonic", &self.0.isSupersonic)
@@ -202,46 +251,46 @@ impl fmt::Debug for Car {
 impl Car {
     #[inline]
     fn get_pos(&self) -> Vec3 {
-        self.0.pos().into()
+        self.0.pos.clone().into()
     }
 
     #[setter(pos)]
     #[inline]
     fn set_pos(&mut self, pos: Vec3) {
-        self.0.pin_mut().set_pos(pos.as_cvec3());
+        self.0.pos = pos.into();
     }
 
     #[inline]
     fn get_vel(&self) -> Vec3 {
-        self.0.vel().into()
+        self.0.vel.clone().into()
     }
 
     #[setter(vel)]
     #[inline]
     fn set_vel(&mut self, vel: Vec3) {
-        self.0.pin_mut().set_vel(vel.as_cvec3());
+        self.0.vel = vel.into();
     }
 
     #[inline]
     fn get_angles(&self) -> Angle {
-        (&self.0.angles).into()
+        self.0.angles.clone().into()
     }
 
     #[setter(angles)]
     #[inline]
     fn set_angles(&mut self, angles: Angle) {
-        self.0.pin_mut().angles = angles.into();
+        self.0.angles = angles.into();
     }
 
     #[inline]
     fn get_angvel(&self) -> Vec3 {
-        self.0.angvel().into()
+        self.0.angvel.clone().into()
     }
 
     #[setter(angvel)]
     #[inline]
     fn set_angvel(&mut self, angvel: Vec3) {
-        self.0.pin_mut().set_angvel(angvel.as_cvec3())
+        self.0.angvel = angvel.into();
     }
 
     #[getter(boost)]
@@ -328,9 +377,9 @@ impl Arena {
     #[setter(ball)]
     fn set_ball(&mut self, ball: Ball) {
         let mut ball_state = self.0.get_ball_state();
-        ball_state.pin_mut().set_pos(ball.pos.as_cvec3());
-        ball_state.pin_mut().set_vel(ball.vel.as_cvec3());
-        ball_state.pin_mut().set_angvel(ball.angvel.as_cvec3());
+        ball_state.pos = ball.pos.into();
+        ball_state.vel = ball.vel.into();
+        ball_state.angvel = ball.angvel.into();
         self.0.pin_mut().set_ball_state(&ball_state);
     }
 
@@ -368,6 +417,13 @@ impl From<UniquePtr<CVec3>> for Vec3 {
     #[inline]
     fn from(vec3: UniquePtr<CVec3>) -> Self {
         Self(vec3)
+    }
+}
+
+impl From<Vec3> for UniquePtr<CVec3> {
+    #[inline]
+    fn from(vec3: Vec3) -> Self {
+        vec3.0
     }
 }
 
