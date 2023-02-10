@@ -109,6 +109,8 @@ jobs:
   release:
     needs: [sdist, manylinux, windows]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Fetch Cargo.toml
@@ -168,3 +170,4 @@ jobs:
           artifacts: "out/*.tar.gz,out/*.zip,out/*win*.whl,out/*linux*.whl"
           body: The .zip file is so you can unzip into your project and have Windows & Linux RocketSim bindings. The .tar.gz is the minimal source distribution if you wish to download and compile this project yourself. The two *.whl files are pip wheels for installing for only one platform (Windows/Linux) via pip.
           tag: ${{ steps.version_check_staging.outputs.releaseVersion }}
+          token: ${{ secrets.GITHUB_TOKEN }}
