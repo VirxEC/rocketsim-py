@@ -43,6 +43,7 @@ class Car:
     boost: float
     is_on_ground: bool
     is_supersonic: bool
+    supersonic_time: float
     is_jumping: bool
     has_jumped: bool
     has_double_jumped: bool

@@ -32,6 +32,3 @@ if __name__ == "__main__":
     end_time = time_ns()
 
     print(f"Simulated {ticks / 120}s of game time in {(end_time - start_time) / 1e6}ms real time")
-
-    print(arena.get_car(car_id))
-    print(arena.get_ball())

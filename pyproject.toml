@@ -6,7 +6,16 @@ build-backend = "maturin"
 name = "rocketsim"
 requires-python = ">=3.7"
 classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Intended Audience :: Developers",
+    "Development Status :: 4 - Beta",
     "Programming Language :: Rust",
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: Microsoft :: Windows",
 ]
+
+[project.urls]
+"Homepage" = "https://github.com/VirxEC/rocketsim-py"
+"Bug Tracker" = "https://github.com/VirxEC/rocketsim-py/issues"

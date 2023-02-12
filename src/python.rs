@@ -328,6 +328,7 @@ impl fmt::Debug for Car {
             .field("boost", &self.0.boost)
             .field("is_on_ground", &self.0.isOnGround)
             .field("is_supersonic", &self.0.isSupersonic)
+            .field("supersonicTime", &self.0.supersonicTime)
             .field("is_jumping", &self.0.isJumping)
             .field("has_jumped", &self.0.hasJumped)
             .field("has_double_jumped", &self.0.hasDoubleJumped)
@@ -426,6 +427,18 @@ impl Car {
     #[inline]
     fn set_is_supersonic(&mut self, is_supersonic: bool) {
         self.0.pin_mut().isSupersonic = is_supersonic;
+    }
+
+    #[getter(supersonic_time)]
+    #[inline]
+    fn supersonic_time(&self) -> f32 {
+        self.0.supersonicTime
+    }
+
+    #[setter(supersonic_time)]
+    #[inline]
+    fn set_supersonic_time(&mut self, supersonic_time: f32) {
+        self.0.pin_mut().supersonicTime = supersonic_time;
     }
 
     #[getter(is_jumping)]
