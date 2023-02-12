@@ -171,3 +171,10 @@ jobs:
           body: The .zip file is so you can unzip into your project and have Windows & Linux RocketSim bindings. The .tar.gz is the minimal source distribution if you wish to download and compile this project yourself. The two *.whl files are pip wheels for installing for only one platform (Windows/Linux) via pip.
           tag: ${{ steps.version_check_staging.outputs.releaseVersion }}
           token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Publish a Python distribution to PyPI
+        if: ${{ steps.version_check_staging.outputs.versionChanged == 'true' }}
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          packages_dir: out/
