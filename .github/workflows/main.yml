@@ -125,19 +125,20 @@ jobs:
       - name: Create singularity
         run: |
           mkdir out
+          mkdir extra
           cd wheels
           unzip *win*.whl
           unzip -n *linux*.whl
           mv *.whl ../out/
           cd rocketsim
-          zip -r ../../out/rocketsim.zip .
+          zip -r ../../extra/rocketsim.zip .
           cd ../..
 
       - name: Upload singularity
         uses: actions/upload-artifact@v3
         with:
           name: rocketsim
-          path: out/rocketsim.zip
+          path: extra/rocketsim.zip
 
       - name: Check Release Tags
         id: version_check_staging
@@ -167,13 +168,12 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           name: ${{ steps.version_check_staging.outputs.releaseVersion }} RocketSim ABI Python Bindings
-          artifacts: "out/*.tar.gz,out/*.zip,out/*win*.whl,out/*linux*.whl"
+          artifacts: "out/*.tar.gz,extra/*.zip,out/*win*.whl,out/*linux*.whl"
           body: The .zip file is so you can unzip into your project and have Windows & Linux RocketSim bindings. The .tar.gz is the minimal source distribution if you wish to download and compile this project yourself. The two *.whl files are pip wheels for installing for only one platform (Windows/Linux) via pip.
           tag: ${{ steps.version_check_staging.outputs.releaseVersion }}
           token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Publish a Python distribution to PyPI
-        if: ${{ steps.version_check_staging.outputs.versionChanged == 'true' }}
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}
