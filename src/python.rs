@@ -573,8 +573,8 @@ impl Arena {
     }
 
     #[inline]
-    fn step(&mut self, ticks_to_simulate: Option<u32>) {
-        self.0.pin_mut().Step(c_int(ticks_to_simulate.unwrap_or(1) as i32));
+    fn step(&mut self, ticks_to_simulate: Option<i32>) {
+        self.0.pin_mut().Step(c_int(ticks_to_simulate.unwrap_or(1)));
     }
 
     #[inline]
