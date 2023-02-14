@@ -41,6 +41,7 @@ class Car:
     angvel: Vec3
     last_rel_dodge_torque: Vec3
     boost: float
+    time_spent_boosting: float
     is_on_ground: bool
     is_supersonic: bool
     supersonic_time: float
@@ -50,7 +51,7 @@ class Car:
     has_flipped: bool
     jump_timer: float
     flip_timer: float
-    air_time_space_jump: float
+    air_time_since_jump: float
     handbrake_val: float
     last_controls: CarControls
 

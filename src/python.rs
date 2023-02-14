@@ -326,6 +326,7 @@ impl fmt::Debug for Car {
             .field("angvel", &self.0.angvel)
             .field("last_rel_dodge_torque", &self.0.lastRelDodgeTorque)
             .field("boost", &self.0.boost)
+            .field("time_spent_boosting", &self.0.timeSpentBoosting)
             .field("is_on_ground", &self.0.isOnGround)
             .field("is_supersonic", &self.0.isSupersonic)
             .field("supersonicTime", &self.0.supersonicTime)
@@ -335,7 +336,7 @@ impl fmt::Debug for Car {
             .field("has_flipped", &self.0.hasFlipped)
             .field("jump_timer", &self.0.jumpTimer)
             .field("flip_timer", &self.0.flipTimer)
-            .field("air_time_space_jump", &self.0.airTimeSpaceJump)
+            .field("air_time_since_jump", &self.0.airTimeSinceJump)
             .field("handbrake_val", &self.0.handbrakeVal)
             .field("last_controls", &self.0.lastControls)
             .finish()
@@ -409,6 +410,18 @@ impl Car {
     #[inline]
     fn set_boost(&mut self, boost: f32) {
         self.0.pin_mut().boost = boost;
+    }
+
+    #[getter(time_spent_boosting)]
+    #[inline]
+    fn get_time_spent_boosting(&self) -> f32 {
+        self.0.timeSpentBoosting
+    }
+
+    #[setter(time_spent_boosting)]
+    #[inline]
+    fn set_time_spent_boosting(&mut self, time_spent_boosting: f32) {
+        self.0.pin_mut().timeSpentBoosting = time_spent_boosting;
     }
 
     #[getter(is_on_ground)]
@@ -513,16 +526,16 @@ impl Car {
         self.0.pin_mut().flipTimer = flip_timer;
     }
 
-    #[getter(air_time_space_jump)]
+    #[getter(air_time_since_jump)]
     #[inline]
-    fn get_air_time_space_jump(&self) -> f32 {
-        self.0.airTimeSpaceJump
+    fn get_air_time_since_jump(&self) -> f32 {
+        self.0.airTimeSinceJump
     }
 
-    #[setter(air_time_space_jump)]
+    #[setter(air_time_since_jump)]
     #[inline]
-    fn set_air_time_space_jump(&mut self, air_time_space_jump: f32) {
-        self.0.pin_mut().airTimeSpaceJump = air_time_space_jump;
+    fn set_air_time_since_jump(&mut self, air_time_since_jump: f32) {
+        self.0.pin_mut().airTimeSinceJump = air_time_since_jump;
     }
 
     #[getter(handbrake_val)]

@@ -300,9 +300,9 @@ dependencies = [
 
 [[package]]
 name = "fastrand"
-version = "1.8.0"
+version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a7a407cfaa3385c4ae6b23e84623d48c2798d06e3e6a1878f7f59f17b3f86499"
+checksum = "e51093e27b0797c359783294ca4f0a911c270184cb10f85783b118614a1501be"
 dependencies = [
  "instant",
 ]
@@ -563,9 +563,9 @@ dependencies = [
 
 [[package]]
 name = "once_cell"
-version = "1.17.0"
+version = "1.17.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6f61fba1741ea2b3d6a1e3178721804bb716a68a6aeba1149b5d52e3d464ea66"
+checksum = "b7e5500299e16ebb147ae15a00a942af264cf3688f47923b8fc2cd5858f23ad3"
 
 [[package]]
 name = "owo-colors"
@@ -751,7 +751,7 @@ dependencies = [
 
 [[package]]
 name = "rocketsim"
-version = "0.1.5"
+version = "0.2.0"
 dependencies = [
  "pyo3",
  "rocketsim_rs",
@@ -759,9 +759,9 @@ dependencies = [
 
 [[package]]
 name = "rocketsim_rs"
-version = "0.1.2"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4b02ec0d7feb3e6c7214ade1950c28fbc0a7c7a87d1fa7abaa428b3309791f71"
+checksum = "ea745265c54c12fa0c4da0cb797408b75cd8164189cf99fce0e9e96012460013"
 dependencies = [
  "autocxx",
  "autocxx-build",
