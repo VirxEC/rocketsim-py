@@ -222,6 +222,14 @@ impl CarControls {
     fn __str__(&self) -> String {
         format!("{self:?}")
     }
+
+    #[inline]
+    fn __repr__(&self) -> String {
+        format!(
+            "CarControls(throttle={}, steer={}, pitch={}, yaw={}, roll={}, jump={}, boost={}, handbrake={})",
+            self.throttle, self.steer, self.pitch, self.yaw, self.roll, self.jump, self.boost, self.handbrake
+        )
+    }
 }
 
 #[pyclass(get_all, set_all, module = "rocketsim.sim")]
@@ -568,6 +576,85 @@ impl Car {
     }
 }
 
+#[pyclass(get_all, unsendable, module = "rocketsim.sim")]
+#[derive(Clone, Debug)]
+pub struct BoostPad {
+    pos: Vec3,
+    is_big: bool,
+}
+
+impl From<UniquePtr<csim::boostpad::BoostPad>> for BoostPad {
+    #[inline]
+    fn from(mut boost_pad: UniquePtr<csim::boostpad::BoostPad>) -> Self {
+        Self {
+            pos: boost_pad.pin_mut().GetPos().within_unique_ptr().into(),
+            is_big: boost_pad.is_big(),
+        }
+    }
+}
+
+#[pymethods]
+impl BoostPad {
+    #[inline]
+    fn __str__(&self) -> String {
+        format!("{self:?}")
+    }
+
+    #[inline]
+    fn __repr__(&self) -> String {
+        format!("BoostPad({}, {})", self.pos.__repr__(), self.is_big)
+    }
+}
+
+#[pyclass(set_all, get_all, module = "rocketsim.sim")]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct BoostPadState {
+    pub id: u32,
+    pub is_active: bool,
+    pub cooldown: f32,
+}
+
+impl From<csim::boostpad::BoostPadState> for BoostPadState {
+    #[inline]
+    fn from(boost_pad_state: csim::boostpad::BoostPadState) -> Self {
+        Self {
+            id: boost_pad_state.id,
+            is_active: boost_pad_state.isActive,
+            cooldown: boost_pad_state.cooldown,
+        }
+    }
+}
+
+impl From<&BoostPadState> for csim::boostpad::BoostPadState {
+    #[inline]
+    fn from(boost_pad_state: &BoostPadState) -> Self {
+        Self {
+            id: boost_pad_state.id,
+            isActive: boost_pad_state.is_active,
+            cooldown: boost_pad_state.cooldown,
+        }
+    }
+}
+
+#[pymethods]
+impl BoostPadState {
+    #[new]
+    #[inline]
+    fn __new__(id: u32, is_active: bool, cooldown: f32) -> Self {
+        Self { id, is_active, cooldown }
+    }
+
+    #[inline]
+    fn __str__(&self) -> String {
+        format!("{self:?}")
+    }
+
+    #[inline]
+    fn __repr__(&self) -> String {
+        format!("BoostPadState({}, {}, {})", self.id, self.is_active, self.cooldown)
+    }
+}
+
 #[pyclass(unsendable, module = "rocketsim.sim")]
 #[repr(transparent)]
 pub struct Arena(UniquePtr<csim::arena::Arena>);
@@ -625,6 +712,26 @@ impl Arena {
     #[inline]
     fn set_car(&mut self, id: u32, car: &Car) -> PyResult<()> {
         self.0.pin_mut().set_car_state(id, car.into()).map_err(|e| PyIndexError::new_err(e.to_string()))
+    }
+
+    #[inline]
+    fn num_pads(&self) -> u32 {
+        self.0.num_boost_pads()
+    }
+
+    #[inline]
+    fn get_pad_static(&self, id: u32) -> BoostPad {
+        self.0.get_pad_static(id).into()
+    }
+
+    #[inline]
+    fn get_pad_state(&self, id: u32) -> BoostPadState {
+        self.0.get_pad_state(id).into()
+    }
+
+    #[inline]
+    fn set_pad_state(&mut self, state: &BoostPadState) {
+        self.0.pin_mut().set_pad_state(&state.into())
     }
 }
 

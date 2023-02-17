@@ -31,4 +31,16 @@ if __name__ == "__main__":
     arena.step(ticks)
     end_time = time_ns()
 
+    inactive_pads = 0
+
+    for i in range(arena.num_pads()):
+        pad = arena.get_pad_state(i)
+        if not pad.is_active:
+            inactive_pads += 1
+            pos = arena.get_pad_static(i).pos
+            print(f"Pad {i} is inactive at {pos}")
+
+    if inactive_pads == 0:
+        print("All pads are active")
+
     print(f"Simulated {ticks / 120}s of game time in {(end_time - start_time) / 1e6}ms real time")
