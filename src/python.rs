@@ -576,36 +576,6 @@ impl Car {
     }
 }
 
-#[pyclass(get_all, unsendable, module = "rocketsim.sim")]
-#[derive(Clone, Debug)]
-pub struct BoostPad {
-    pos: Vec3,
-    is_big: bool,
-}
-
-impl From<UniquePtr<csim::boostpad::BoostPad>> for BoostPad {
-    #[inline]
-    fn from(mut boost_pad: UniquePtr<csim::boostpad::BoostPad>) -> Self {
-        Self {
-            pos: boost_pad.pin_mut().GetPos().within_unique_ptr().into(),
-            is_big: boost_pad.is_big(),
-        }
-    }
-}
-
-#[pymethods]
-impl BoostPad {
-    #[inline]
-    fn __str__(&self) -> String {
-        format!("{self:?}")
-    }
-
-    #[inline]
-    fn __repr__(&self) -> String {
-        format!("BoostPad({}, {})", self.pos.__repr__(), self.is_big)
-    }
-}
-
 #[pyclass(set_all, get_all, module = "rocketsim.sim")]
 #[derive(Clone, Copy, Debug, Default)]
 pub struct BoostPadState {
@@ -720,8 +690,13 @@ impl Arena {
     }
 
     #[inline]
-    fn get_pad_static(&self, id: u32) -> BoostPad {
-        self.0.get_pad_static(id).into()
+    fn get_pad_is_big(&self, id: u32) -> bool {
+        self.0.get_pad_is_big(id)
+    }
+
+    #[inline]
+    fn get_pad_pos(&self, id: u32) -> Vec3 {
+        self.0.get_pad_pos(id).clone().into()
     }
 
     #[inline]
