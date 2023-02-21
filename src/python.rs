@@ -558,6 +558,66 @@ impl Car {
         self.0.pin_mut().handbrakeVal = handbrake_val;
     }
 
+    #[getter(is_auto_flipping)]
+    #[inline]
+    fn get_is_auto_flipping(&self) -> bool {
+        self.0.isAutoFlipping
+    }
+
+    #[setter(is_auto_flipping)]
+    #[inline]
+    fn set_is_auto_flipping(&mut self, is_auto_flipping: bool) {
+        self.0.pin_mut().isAutoFlipping = is_auto_flipping;
+    }
+
+    #[getter(auto_flip_timer)]
+    #[inline]
+    fn get_auto_flip_timer(&self) -> f32 {
+        self.0.autoFlipTimer
+    }
+
+    #[setter(auto_flip_timer)]
+    #[inline]
+    fn set_auto_flip_timer(&mut self, auto_flip_timer: f32) {
+        self.0.pin_mut().autoFlipTimer = auto_flip_timer;
+    }
+
+    #[getter(auto_flip_torque_scale)]
+    #[inline]
+    fn get_auto_flip_torque_scale(&self) -> f32 {
+        self.0.autoFlipTorqueScale
+    }
+
+    #[setter(auto_flip_torque_scale)]
+    #[inline]
+    fn set_auto_flip_torque_scale(&mut self, auto_flip_torque_scale: f32) {
+        self.0.pin_mut().autoFlipTorqueScale = auto_flip_torque_scale;
+    }
+
+    #[getter(has_contact)]
+    #[inline]
+    fn get_has_contact(&self) -> bool {
+        self.0.hasContact
+    }
+
+    #[setter(has_contact)]
+    #[inline]
+    fn set_has_contact(&mut self, has_contact: bool) {
+        self.0.pin_mut().hasContact = has_contact;
+    }
+
+    #[getter(contact_normal)]
+    #[inline]
+    fn get_contact_normal(&self) -> Vec3 {
+        self.0.contactNormal.clone().into()
+    }
+
+    #[setter(contact_normal)]
+    #[inline]
+    fn set_contact_normal(&mut self, contact_normal: Vec3) {
+        self.0.pin_mut().contactNormal = contact_normal.into();
+    }
+
     #[getter(last_controls)]
     #[inline]
     fn get_last_controls(&self) -> CarControls {
@@ -581,16 +641,6 @@ impl Car {
 pub struct BoostPad {
     pos: Vec3,
     is_big: bool,
-}
-
-impl From<UniquePtr<csim::boostpad::BoostPad>> for BoostPad {
-    #[inline]
-    fn from(mut boost_pad: UniquePtr<csim::boostpad::BoostPad>) -> Self {
-        Self {
-            pos: boost_pad.pin_mut().GetPos().within_unique_ptr().into(),
-            is_big: boost_pad.is_big(),
-        }
-    }
 }
 
 #[pymethods]
@@ -663,18 +713,18 @@ pub struct Arena(UniquePtr<csim::arena::Arena>);
 impl Arena {
     #[new]
     #[inline]
-    fn __new__(gamemode: GameMode, tick_rate: Option<f32>) -> Self {
-        Self(csim::arena::Arena::new(gamemode.into(), tick_rate.unwrap_or(120.)).within_unique_ptr())
+    fn __new__(gamemode: Option<GameMode>, tick_rate: Option<f32>) -> Self {
+        Self(csim::arena::Arena::new(gamemode.unwrap_or_default().into(), tick_rate.unwrap_or(120.)).within_unique_ptr())
     }
 
     #[inline]
     fn get_tick_rate(&mut self) -> f32 {
-        self.0.pin_mut().GetTickRate()
+        self.0.pin_mut().get_tick_rate()
     }
 
     #[inline]
     fn step(&mut self, ticks_to_simulate: Option<i32>) {
-        self.0.pin_mut().Step(c_int(ticks_to_simulate.unwrap_or(1)));
+        self.0.pin_mut().step(ticks_to_simulate.unwrap_or(1));
     }
 
     #[inline]
@@ -689,6 +739,21 @@ impl Arena {
         ball_state.vel = ball.vel.into();
         ball_state.angvel = ball.angvel.into();
         self.0.pin_mut().set_ball_state(&ball_state);
+    }
+
+    #[inline]
+    fn num_cars(&self) -> u32 {
+        self.0.num_cars()
+    }
+
+    #[inline]
+    fn get_car_from_index(&mut self, index: u32) -> Car {
+        self.0.pin_mut().get_car_from_index(index).into()
+    }
+
+    #[inline]
+    fn get_car_id_from_index(&self, index: u32) -> u32 {
+        self.0.get_car_id_from_index(index)
     }
 
     #[inline]
@@ -721,7 +786,10 @@ impl Arena {
 
     #[inline]
     fn get_pad_static(&self, id: u32) -> BoostPad {
-        self.0.get_pad_static(id).into()
+        BoostPad {
+            pos: self.0.get_pad_pos(id).into(),
+            is_big: self.0.get_pad_is_big(id),
+        }
     }
 
     #[inline]
@@ -770,7 +838,7 @@ impl Clone for Vec3 {
 impl Default for Vec3 {
     #[inline]
     fn default() -> Self {
-        Self(CVec3::default())
+        Self(CVec3::zero())
     }
 }
 

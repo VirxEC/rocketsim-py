@@ -219,9 +219,9 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
 name = "clang-sys"
-version = "1.4.0"
+version = "1.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa2e27ae6ab525c3d369ded447057bca5438d86dc3a68f6faafb8269ba82ebf3"
+checksum = "77ed9a53e5d4d9c573ae844bfac6872b159cb1d1585a83b29e7a64b7eef7332a"
 dependencies = [
  "glob",
  "libc",
@@ -751,7 +751,7 @@ dependencies = [
 
 [[package]]
 name = "rocketsim"
-version = "0.2.1"
+version = "0.2.3"
 dependencies = [
  "pyo3",
  "rocketsim_rs",
@@ -759,9 +759,9 @@ dependencies = [
 
 [[package]]
 name = "rocketsim_rs"
-version = "0.2.2"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "87329f457df5cbf23eec73423dbceb5c13e48ee8a555c57aa23c88b0474705a5"
+checksum = "eb35ff7ffd3fb2132b86b1d8617e9221acd850818f592f8e9f12b8ca82896a6a"
 dependencies = [
  "autocxx",
  "autocxx-build",

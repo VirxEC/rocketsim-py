@@ -7,6 +7,8 @@ if __name__ == "__main__":
     arena = Arena(GameMode.Soccar)
     print(f"Arena tick rate: {arena.get_tick_rate()}")
 
+    print(arena.get_pad_static(0))
+
     ball = arena.get_ball()
     ball.pos = ball.get_pos().with_z(1500)
     arena.ball = ball
