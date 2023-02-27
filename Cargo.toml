@@ -1,6 +1,6 @@
 [package]
 name = "rocketsim"
-version = "0.2.3"
+version = "0.2.4"
 edition = "2021"
 publish = false
 exclude = [".git*", "venv/", "assets", "pytest.py", "rustfmt.toml"]
