@@ -812,9 +812,9 @@ dependencies = [
 
 [[package]]
 name = "rocketsim_rs"
-version = "0.9.1"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "95ba0207955cabb26cf79aa7f80e2288a2ee245f3aafde86cd08956a18403ccb"
+checksum = "5d8729ca0d824301be54fc61834c97d28c12ce2088e1cf47e97c245997685911"
 dependencies = [
  "autocxx",
  "autocxx-build",

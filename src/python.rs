@@ -4,13 +4,13 @@ use rocketsim_rs::{
     cxx::UniquePtr,
     glam_ext::glam::{Mat3A, Quat},
     sim as csim,
-    sim::math::{Angle, RotMat as CRotMat, Vec3 as CVec3},
+    math::{Angle, RotMat as CRotMat, Vec3 as CVec3},
 };
 
 #[pyfunction]
 #[inline]
-pub fn init() {
-    rocketsim_rs::init();
+pub fn init(collision_meshes_folder: Option<&str>) {
+    rocketsim_rs::init(collision_meshes_folder);
 }
 
 #[pyclass(module = "rocketsim.sim")]
