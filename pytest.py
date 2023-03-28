@@ -1,7 +1,7 @@
 from time import time_ns
 
-from rocketsim import Angle, Vec3
-from rocketsim.sim import Arena, CarConfig, GameMode, Team, CarControls
+from rocketsim import RotMat, Vec3
+from rocketsim.sim import Arena, CarConfig, CarControls, GameMode, Team
 
 if __name__ == "__main__":
     arena = Arena(GameMode.Soccar)
@@ -10,8 +10,8 @@ if __name__ == "__main__":
     print(arena.get_pad_static(0))
 
     ball = arena.get_ball()
-    ball.pos = ball.get_pos().with_z(1500)
-    arena.ball = ball
+    ball.pos = ball.pos.with_z(1500)
+    arena.set_ball(ball)
     print("Set ball state")
 
     car_id = arena.add_car(Team.Blue, CarConfig.Octane)
@@ -19,7 +19,7 @@ if __name__ == "__main__":
 
     car = arena.get_car(car_id)
     car.pos = Vec3(0, 0, 1050)
-    car.angles = Angle(0, 1.1, 0)
+    car.rot_mat = RotMat.from_angles(0, 1.1, 0)
     car.boost = 100
     arena.set_car(car_id, car)
     print("Set car state")
@@ -32,6 +32,9 @@ if __name__ == "__main__":
     start_time = time_ns()
     arena.step(ticks)
     end_time = time_ns()
+
+    car = arena.get_car(car_id)
+    assert(car.boost == 0)
 
     inactive_pads = 0
 

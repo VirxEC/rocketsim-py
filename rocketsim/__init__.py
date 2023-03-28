@@ -8,3 +8,5 @@ if hasattr(rocketsim, "__all__"):
     __all__ = rocketsim.__all__
 
 sys.modules["rocketsim.sim"] = sim
+
+rocketsim.init()
