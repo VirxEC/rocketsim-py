@@ -3,8 +3,8 @@ use rocketsim_rs::{
     autocxx::prelude::*,
     cxx::UniquePtr,
     glam_ext::glam::{Mat3A, Quat},
-    sim as csim,
     math::{Angle, RotMat as CRotMat, Vec3 as CVec3},
+    sim as csim,
 };
 
 #[pyfunction]
@@ -14,7 +14,7 @@ pub fn init(collision_meshes_folder: Option<&str>) {
 }
 
 #[pyclass(module = "rocketsim.sim")]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Team {
     Blue,
     Orange,
@@ -47,7 +47,7 @@ impl From<GameMode> for csim::arena::GameMode {
 }
 
 #[pyclass(get_all, set_all, module = "rocketsim.sim")]
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct BallHitInfo {
     car_id: u32,
     relative_pos_on_ball: Vec3,
@@ -92,7 +92,7 @@ impl BallHitInfo {
 }
 
 #[pyclass(get_all, set_all, module = "rocketsim.sim")]
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Ball {
     pos: Vec3,
     vel: Vec3,
@@ -163,7 +163,7 @@ impl From<&CarConfig> for &'static csim::car::CarConfig {
 }
 
 #[pyclass(get_all, set_all, module = "rocketsim.sim")]
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct CarControls {
     throttle: f32,
     steer: f32,
@@ -283,7 +283,7 @@ impl CarControls {
 }
 
 #[pyclass(get_all, set_all, module = "rocketsim.sim")]
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Car {
     pos: Vec3,
     rot_mat: RotMat,
@@ -410,7 +410,7 @@ impl Car {
 }
 
 #[pyclass(get_all, module = "rocketsim.sim")]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct BoostPad {
     pos: Vec3,
     is_big: bool,
@@ -425,7 +425,7 @@ impl BoostPad {
 }
 
 #[pyclass(set_all, get_all, module = "rocketsim.sim")]
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct BoostPadState {
     pub is_active: bool,
     pub cooldown: f32,
@@ -487,6 +487,17 @@ impl BoostPadState {
 #[pyclass(unsendable, module = "rocketsim.sim")]
 #[repr(transparent)]
 pub struct Arena(UniquePtr<csim::arena::Arena>);
+
+impl PartialEq for Arena {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.num_cars() == other.0.num_cars()
+            && self.0.num_pads() == other.0.num_pads()
+            && self.0.get_tick_rate() == other.0.get_tick_rate()
+            && self.0.get_tick_count() == other.0.get_tick_count()
+            // && self.0.get_cars().iter().zip(other.0.get_cars().iter()).all(|(a, b)| a == b)
+            && self.0.iter_pad_state().zip(other.0.iter_pad_state()).all(|(a, b)| a == b)
+    }
+}
 
 #[pymethods]
 impl Arena {
@@ -576,10 +587,29 @@ impl Arena {
     fn set_pad_state(&mut self, index: usize, state: &BoostPadState) {
         self.0.pin_mut().set_pad_state(index, state.into())
     }
+
+    fn set_goal_scored_callback(&mut self, py: Python, callback: PyObject) {
+        self.0.pin_mut().set_goal_scored_callback(
+            |_, team, user_info| {
+                Python::with_gil(|_| {
+                    let team = match team {
+                        csim::car::Team::BLUE => Team::Blue,
+                        csim::car::Team::ORANGE => Team::Orange,
+                    };
+
+                    unsafe {
+                        let callback = user_info as *const PyAny;
+                        (*callback).call1((team,)).unwrap();
+                    }
+                })
+            },
+            callback.as_ref(py) as *const PyAny as usize,
+        );
+    }
 }
 
 #[pyclass(get_all, set_all, module = "rocketsim")]
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct RotMat {
     pub forward: Vec3,
     pub right: Vec3,
@@ -634,7 +664,7 @@ impl RotMat {
 }
 
 #[pyclass(get_all, set_all, module = "rocketsim")]
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Vec3 {
     pub x: f32,
     pub y: f32,
