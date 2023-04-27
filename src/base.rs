@@ -18,6 +18,13 @@ pub struct RotMat {
     pub up: Vec3,
 }
 
+impl From<RotMat> for Quat {
+    #[inline]
+    fn from(mat: RotMat) -> Self {
+        Self::from_mat3(&mat.into())
+    }
+}
+
 impl From<Quat> for RotMat {
     #[inline]
     fn from(quat: Quat) -> Self {
@@ -33,6 +40,13 @@ impl From<Mat3> for RotMat {
             right: mat.y_axis.into(),
             up: mat.z_axis.into(),
         }
+    }
+}
+
+impl From<RotMat> for Mat3 {
+    #[inline]
+    fn from(mat: RotMat) -> Self {
+        Self::from_cols(mat.forward.into(), mat.right.into(), mat.up.into())
     }
 }
 
@@ -94,6 +108,13 @@ pub struct Vec3 {
 impl From<GVec3> for Vec3 {
     #[inline]
     fn from(vec3: GVec3) -> Self {
+        Self { x: vec3.x, y: vec3.y, z: vec3.z }
+    }
+}
+
+impl From<Vec3> for GVec3 {
+    #[inline]
+    fn from(vec3: Vec3) -> Self {
         Self { x: vec3.x, y: vec3.y, z: vec3.z }
     }
 }

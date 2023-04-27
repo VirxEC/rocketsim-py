@@ -1,9 +1,11 @@
 mod base;
 mod python;
+mod state;
 
 use base::*;
 use pyo3::prelude::*;
 use python::*;
+use state::*;
 
 macro_rules! pynamedmodule {
     (doc: $doc:literal, name: $name:tt, funcs: [$($func_name:path),*], classes: [$($class_name:ident),*], submodules: [$($submodule_name:ident),*]) => {
@@ -32,6 +34,6 @@ pynamedmodule! {
     doc: "",
     name: rocketsim,
     funcs: [init],
-    classes: [Vec3, RotMat],
+    classes: [Vec3, RotMat, GameState],
     submodules: [sim]
 }

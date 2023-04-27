@@ -20,6 +20,16 @@ impl From<Team> for csim::Team {
     }
 }
 
+impl From<csim::Team> for Team {
+    #[inline]
+    fn from(team: csim::Team) -> Self {
+        match team {
+            csim::Team::BLUE => Self::Blue,
+            csim::Team::ORANGE => Self::Orange,
+        }
+    }
+}
+
 #[pyclass(module = "rocketsim.sim")]
 #[derive(Clone, Copy, Debug, Default)]
 pub enum GameMode {
@@ -131,6 +141,7 @@ impl Ball {
 }
 
 #[pyclass(module = "rocketsim.sim")]
+#[derive(Clone, Copy, Debug)]
 pub enum CarConfig {
     Octane,
     Dominus,

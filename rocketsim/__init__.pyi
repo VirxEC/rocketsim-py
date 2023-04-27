@@ -1,3 +1,6 @@
+from rocketsim.sim import Ball, Car, Team
+
+
 class Vec3:
     x: float
     y: float
@@ -22,3 +25,16 @@ class RotMat:
 
     @staticmethod
     def from_angles(pitch: float, yaw: float, roll: float) -> RotMat: ...
+
+class GameState:
+    tick_rate: float
+    tick_count: int
+    ball: Ball
+    ball_rot: RotMat
+    cars: list[CarInfo]
+
+class CarInfo:
+    id: int
+    team: Team
+    state: Car
+    # config: CarConfig
