@@ -1,17 +1,7 @@
 use pyo3::{exceptions::PyIndexError, prelude::*, types::PyTuple};
-use rocketsim_rs::{
-    autocxx::prelude::*,
-    cxx::UniquePtr,
-    glam_ext::glam::{Mat3A, Quat},
-    math::{Angle, RotMat as CRotMat, Vec3 as CVec3},
-    sim as csim,
-};
+use rocketsim_rs::{autocxx::prelude::*, cxx::UniquePtr, glam_ext::glam::Quat, sim as csim};
 
-#[pyfunction]
-#[inline]
-pub fn init(collision_meshes_folder: Option<&str>) {
-    rocketsim_rs::init(collision_meshes_folder);
-}
+use crate::base::{RotMat, Vec3};
 
 #[pyclass(module = "rocketsim.sim")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -35,6 +25,7 @@ impl From<Team> for csim::Team {
 pub enum GameMode {
     #[default]
     Soccar,
+    TheVoid,
 }
 
 impl From<GameMode> for csim::GameMode {
@@ -42,6 +33,7 @@ impl From<GameMode> for csim::GameMode {
     fn from(gamemode: GameMode) -> Self {
         match gamemode {
             GameMode::Soccar => Self::SOCCAR,
+            GameMode::TheVoid => Self::THE_VOID,
         }
     }
 }
@@ -561,6 +553,11 @@ impl Arena {
     }
 
     #[inline]
+    fn get_ball_rotation(&self) -> RotMat {
+        Quat::from_array(self.0.get_ball_rotation()).into()
+    }
+
+    #[inline]
     fn set_car(&mut self, id: u32, car: Car) -> PyResult<()> {
         self.0.pin_mut().set_car(id, car.into()).map_err(|e| PyIndexError::new_err(e.to_string()))
     }
@@ -605,121 +602,5 @@ impl Arena {
             },
             callback.as_ref(py) as *const PyAny as usize,
         );
-    }
-}
-
-#[pyclass(get_all, set_all, module = "rocketsim")]
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct RotMat {
-    pub forward: Vec3,
-    pub right: Vec3,
-    pub up: Vec3,
-}
-
-impl From<CRotMat> for RotMat {
-    #[inline]
-    fn from(rot_mat: CRotMat) -> Self {
-        Self {
-            forward: rot_mat.forward.into(),
-            right: rot_mat.right.into(),
-            up: rot_mat.up.into(),
-        }
-    }
-}
-
-impl From<RotMat> for CRotMat {
-    #[inline]
-    fn from(rot_mat: RotMat) -> Self {
-        Self {
-            forward: rot_mat.forward.into(),
-            right: rot_mat.right.into(),
-            up: rot_mat.up.into(),
-        }
-    }
-}
-
-#[pymethods]
-impl RotMat {
-    #[new]
-    #[inline]
-    fn __new__(forward: Vec3, right: Vec3, up: Vec3) -> Self {
-        Self { forward, right, up }
-    }
-
-    #[inline]
-    fn __str__(&self) -> String {
-        format!("{self:?}")
-    }
-
-    #[inline]
-    fn __repr__(&self) -> String {
-        format!("RotMat({}, {}, {})", self.forward.__repr__(), self.right.__repr__(), self.up.__repr__())
-    }
-
-    #[inline]
-    #[staticmethod]
-    fn from_angles(pitch: f32, yaw: f32, roll: f32) -> Self {
-        CRotMat::from(Mat3A::from_quat(Quat::from(Angle { pitch, yaw, roll }))).into()
-    }
-}
-
-#[pyclass(get_all, set_all, module = "rocketsim")]
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct Vec3 {
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
-}
-
-impl From<CVec3> for Vec3 {
-    #[inline]
-    fn from(vec3: CVec3) -> Self {
-        Self { x: vec3.x, y: vec3.y, z: vec3.z }
-    }
-}
-
-impl From<Vec3> for CVec3 {
-    #[inline]
-    fn from(vec3: Vec3) -> Self {
-        CVec3 {
-            x: vec3.x,
-            y: vec3.y,
-            z: vec3.z,
-            _w: 0.,
-        }
-    }
-}
-
-#[pymethods]
-impl Vec3 {
-    #[new]
-    #[inline]
-    fn new(x: f32, y: f32, z: f32) -> Self {
-        Self { x, y, z }
-    }
-
-    #[inline]
-    fn with_x(&mut self, x: f32) -> Self {
-        Self::new(x, self.y, self.z)
-    }
-
-    #[inline]
-    fn with_y(&mut self, y: f32) -> Self {
-        Self::new(self.x, y, self.z)
-    }
-
-    #[inline]
-    fn with_z(&self, z: f32) -> Self {
-        Self::new(self.x, self.y, z)
-    }
-
-    #[inline]
-    fn __str__(&self) -> String {
-        format!("{self:?}")
-    }
-
-    #[inline]
-    fn __repr__(&self) -> String {
-        format!("Vec3({}, {}, {})", self.x, self.y, self.z)
     }
 }

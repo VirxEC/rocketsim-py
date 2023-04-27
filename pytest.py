@@ -1,11 +1,12 @@
+if __name__ == "__main__":
+    print("Please run as unittest, for example: python -m unittest pytest.py")
+    exit()
+
 import unittest
 from time import time_ns
 
 from rocketsim import RotMat, Vec3
 from rocketsim.sim import Arena, CarConfig, CarControls, GameMode, Team
-
-if __name__ == "__main__":
-    pass
 
 class TestArena(unittest.TestCase):
     
