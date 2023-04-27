@@ -104,8 +104,8 @@ class TestArena(unittest.TestCase):
         ball.pos = Vec3(0., -5119., 184.)
         ball.vel = Vec3(0., -6600., 0.)
 
-        ball.hit_info.car_id = car_id
-        ball.hit_info.ball_pos = ball.pos
+        # ball.hit_info.car_id = car_id
+        # ball.hit_info.ball_pos = ball.pos
         
         arena.set_ball(ball)
         

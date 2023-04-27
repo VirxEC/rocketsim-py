@@ -20,7 +20,7 @@ pub enum Team {
     Orange,
 }
 
-impl From<Team> for csim::car::Team {
+impl From<Team> for csim::Team {
     #[inline]
     fn from(team: Team) -> Self {
         match team {
@@ -37,7 +37,7 @@ pub enum GameMode {
     Soccar,
 }
 
-impl From<GameMode> for csim::arena::GameMode {
+impl From<GameMode> for csim::GameMode {
     #[inline]
     fn from(gamemode: GameMode) -> Self {
         match gamemode {
@@ -49,35 +49,38 @@ impl From<GameMode> for csim::arena::GameMode {
 #[pyclass(get_all, set_all, module = "rocketsim.sim")]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct BallHitInfo {
-    car_id: u32,
+    is_valid: bool,
     relative_pos_on_ball: Vec3,
     ball_pos: Vec3,
     extra_hit_vel: Vec3,
     tick_count_when_hit: u64,
+    tick_count_when_extra_impulse_applied: u64,
 }
 
-impl From<csim::ball::BallHitInfo> for BallHitInfo {
+impl From<csim::BallHitInfo> for BallHitInfo {
     #[inline]
-    fn from(hit: csim::ball::BallHitInfo) -> Self {
+    fn from(hit: csim::BallHitInfo) -> Self {
         Self {
-            car_id: hit.car_id,
+            is_valid: hit.is_valid,
             relative_pos_on_ball: hit.relative_pos_on_ball.into(),
             ball_pos: hit.ball_pos.into(),
             extra_hit_vel: hit.extra_hit_vel.into(),
             tick_count_when_hit: hit.tick_count_when_hit,
+            tick_count_when_extra_impulse_applied: hit.tick_count_when_extra_impulse_applied,
         }
     }
 }
 
-impl From<BallHitInfo> for csim::ball::BallHitInfo {
+impl From<BallHitInfo> for csim::BallHitInfo {
     #[inline]
     fn from(hit: BallHitInfo) -> Self {
         Self {
-            car_id: hit.car_id,
+            is_valid: hit.is_valid,
             relative_pos_on_ball: hit.relative_pos_on_ball.into(),
             ball_pos: hit.ball_pos.into(),
             extra_hit_vel: hit.extra_hit_vel.into(),
             tick_count_when_hit: hit.tick_count_when_hit,
+            tick_count_when_extra_impulse_applied: hit.tick_count_when_extra_impulse_applied,
         }
     }
 }
@@ -97,29 +100,26 @@ pub struct Ball {
     pos: Vec3,
     vel: Vec3,
     ang_vel: Vec3,
-    hit_info: BallHitInfo,
 }
 
-impl From<csim::ball::BallState> for Ball {
+impl From<csim::BallState> for Ball {
     #[inline]
-    fn from(ball: csim::ball::BallState) -> Self {
+    fn from(ball: csim::BallState) -> Self {
         Self {
             pos: ball.pos.into(),
             vel: ball.vel.into(),
             ang_vel: ball.ang_vel.into(),
-            hit_info: ball.hit_info.into(),
         }
     }
 }
 
-impl From<Ball> for csim::ball::BallState {
+impl From<Ball> for csim::BallState {
     #[inline]
     fn from(ball: Ball) -> Self {
         Self {
             pos: ball.pos.into(),
             vel: ball.vel.into(),
             ang_vel: ball.ang_vel.into(),
-            hit_info: ball.hit_info.into(),
         }
     }
 }
@@ -148,16 +148,16 @@ pub enum CarConfig {
     Merc,
 }
 
-impl From<&CarConfig> for &'static csim::car::CarConfig {
+impl From<&CarConfig> for &'static csim::CarConfig {
     #[inline]
     fn from(config: &CarConfig) -> Self {
         match config {
-            CarConfig::Octane => csim::car::CarConfig::octane(),
-            CarConfig::Dominus => csim::car::CarConfig::dominus(),
-            CarConfig::Plank => csim::car::CarConfig::plank(),
-            CarConfig::Breakout => csim::car::CarConfig::breakout(),
-            CarConfig::Hybrid => csim::car::CarConfig::hybrid(),
-            CarConfig::Merc => csim::car::CarConfig::merc(),
+            CarConfig::Octane => csim::CarConfig::octane(),
+            CarConfig::Dominus => csim::CarConfig::dominus(),
+            CarConfig::Plank => csim::CarConfig::plank(),
+            CarConfig::Breakout => csim::CarConfig::breakout(),
+            CarConfig::Hybrid => csim::CarConfig::hybrid(),
+            CarConfig::Merc => csim::CarConfig::merc(),
         }
     }
 }
@@ -312,13 +312,13 @@ pub struct Car {
     cooldown_timer: f32,
     is_demoed: bool,
     demo_respawn_timer: f32,
-    last_hit_ball_tick: u64,
+    ball_hit_info: BallHitInfo,
     last_controls: CarControls,
 }
 
-impl From<csim::car::CarState> for Car {
+impl From<csim::CarState> for Car {
     #[inline]
-    fn from(car: csim::car::CarState) -> Self {
+    fn from(car: csim::CarState) -> Self {
         Self {
             pos: car.pos.into(),
             rot_mat: car.rot_mat.into(),
@@ -347,13 +347,13 @@ impl From<csim::car::CarState> for Car {
             cooldown_timer: car.cooldown_timer,
             is_demoed: car.is_demoed,
             demo_respawn_timer: car.demo_respawn_timer,
-            last_hit_ball_tick: car.last_hit_ball_tick,
+            ball_hit_info: car.ball_hit_info.into(),
             last_controls: car.last_controls.into(),
         }
     }
 }
 
-impl From<Car> for csim::car::CarState {
+impl From<Car> for csim::CarState {
     #[inline]
     fn from(car: Car) -> Self {
         Self {
@@ -384,7 +384,7 @@ impl From<Car> for csim::car::CarState {
             cooldown_timer: car.cooldown_timer,
             is_demoed: car.is_demoed,
             demo_respawn_timer: car.demo_respawn_timer,
-            last_hit_ball_tick: car.last_hit_ball_tick,
+            ball_hit_info: car.ball_hit_info.into(),
             last_controls: car.last_controls.into(),
         }
     }
@@ -405,7 +405,7 @@ impl Car {
 
     #[inline]
     fn get_contacting_car(&self, arena: &mut Arena) -> Option<Self> {
-        csim::car::CarState::from(*self).get_contacting_car(arena.0.pin_mut()).map(Into::into)
+        csim::CarState::from(*self).get_contacting_car(arena.0.pin_mut()).map(Into::into)
     }
 }
 
@@ -433,9 +433,9 @@ pub struct BoostPadState {
     pub prev_locked_car_id: u32,
 }
 
-impl From<csim::boostpad::BoostPadState> for BoostPadState {
+impl From<csim::BoostPadState> for BoostPadState {
     #[inline]
-    fn from(boost_pad_state: csim::boostpad::BoostPadState) -> Self {
+    fn from(boost_pad_state: csim::BoostPadState) -> Self {
         Self {
             is_active: boost_pad_state.is_active,
             cooldown: boost_pad_state.cooldown,
@@ -445,7 +445,7 @@ impl From<csim::boostpad::BoostPadState> for BoostPadState {
     }
 }
 
-impl From<&BoostPadState> for csim::boostpad::BoostPadState {
+impl From<&BoostPadState> for csim::BoostPadState {
     #[inline]
     fn from(boost_pad_state: &BoostPadState) -> Self {
         Self {
@@ -486,7 +486,7 @@ impl BoostPadState {
 
 #[pyclass(unsendable, module = "rocketsim.sim")]
 #[repr(transparent)]
-pub struct Arena(UniquePtr<csim::arena::Arena>);
+pub struct Arena(UniquePtr<csim::Arena>);
 
 impl PartialEq for Arena {
     fn eq(&self, other: &Self) -> bool {
@@ -504,7 +504,7 @@ impl Arena {
     #[new]
     #[inline]
     fn __new__(gamemode: Option<GameMode>, tick_rate: Option<f32>) -> Self {
-        Self(csim::arena::Arena::new(gamemode.unwrap_or_default().into(), tick_rate.unwrap_or(120.)).within_unique_ptr())
+        Self(csim::Arena::new(gamemode.unwrap_or_default().into(), tick_rate.unwrap_or(120.)).within_unique_ptr())
     }
 
     #[inline]
@@ -593,8 +593,8 @@ impl Arena {
             |_, team, user_info| {
                 Python::with_gil(|_| {
                     let team = match team {
-                        csim::car::Team::BLUE => Team::Blue,
-                        csim::car::Team::ORANGE => Team::Orange,
+                        csim::Team::BLUE => Team::Blue,
+                        csim::Team::ORANGE => Team::Orange,
                     };
 
                     unsafe {

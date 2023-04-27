@@ -11,11 +11,11 @@ class GameMode(Enum):
     Soccar = 0
 
 class BallHitInfo:
-    car_id: int
     relative_pos_on_ball: Vec3
     ball_pos: Vec3
     extra_hit_vel: Vec3
     tick_count_when_hit: int
+    tick_count_when_extra_impulse_applied: int
 
     def __init__() -> BallHitInfo: ...
     def __str__(self) -> str: ...
@@ -24,7 +24,6 @@ class Ball:
     pos: Vec3
     vel: Vec3
     ang_vel: Vec3
-    hit_info: BallHitInfo
 
     def __init__() -> Ball: ...
     def __str__(self) -> str: ...
@@ -71,7 +70,7 @@ class Car:
     cooldown_timer: float
     is_demoed: bool
     demo_respawn_timer: float
-    last_hit_ball_tick: int
+    ball_hit_info: BallHitInfo
     last_controls: CarControls
 
     def __init__() -> Car: ...
