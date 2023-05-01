@@ -1,5 +1,4 @@
-from rocketsim.sim import Ball, Car, Team
-
+from rocketsim.sim import Ball, Car, CarConfig, Team
 
 class Vec3:
     x: float
@@ -33,8 +32,16 @@ class GameState:
     ball_rot: RotMat
     cars: list[CarInfo]
 
+    def __init__(tick_count: float=0, tick_rate: float=0, ball: Ball=Ball(), ball_rot: RotMat=RotMat(), cars: list[CarInfo]=[]) -> GameState: ...
+    def __str__(self) -> str: ...
+    def __repr__(self) -> str: ...
+
 class CarInfo:
     id: int
     team: Team
     state: Car
-    # config: CarConfig
+    config: CarConfig
+
+    def __init__(id: int=1, team: Team=Team.Blue, state: Car=Car(), config: CarConfig=CarConfig()) -> CarInfo: ...
+    def __str__(self) -> str: ...
+    def __repr__(self) -> str: ...

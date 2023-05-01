@@ -131,3 +131,77 @@ class TestArena(unittest.TestCase):
         ball3 = arena.get_ball()
 
         self.assertNotEqual(ball3, ball2)
+
+    def test_game_state(self):
+        arena = Arena(GameMode.Soccar, 120)
+        arena.add_car(Team.Orange, CarConfig.octane())
+
+        game_state = arena.get_game_state()
+
+        game_state.ball.pos = Vec3(0., -5119., 184.)
+        game_state.ball.vel.y = -6600
+
+        self.assertEqual(game_state.ball.pos.x, 0.)
+        self.assertEqual(game_state.ball.pos.y, -5119.)
+        self.assertEqual(game_state.ball.pos.z, 184.)
+
+        self.assertEqual(game_state.ball.vel.x, 0.)
+        self.assertEqual(game_state.ball.vel.y, -6600.)
+        self.assertEqual(game_state.ball.vel.z, 0.)
+
+        car = game_state.cars[0]
+        car.state.pos = Vec3(0, 0, 1050)
+        car.state.rot_mat = RotMat.from_angles(0, 1.1, 0)
+        car.state.boost = 100
+
+        self.assertEqual(game_state.cars[0].state.pos.x, 0)
+        self.assertEqual(game_state.cars[0].state.pos.y, 0)
+        self.assertEqual(game_state.cars[0].state.pos.z, 1050)
+
+        angles = RotMat.from_angles(0, 1.1, 0)
+        self.assertEqual(game_state.cars[0].state.rot_mat.forward.x, angles.forward.x)
+        self.assertEqual(game_state.cars[0].state.rot_mat.forward.y, angles.forward.y)
+        self.assertEqual(game_state.cars[0].state.rot_mat.forward.z, angles.forward.z)
+
+        self.assertEqual(game_state.cars[0].state.rot_mat.right.x, angles.right.x)
+        self.assertEqual(game_state.cars[0].state.rot_mat.right.y, angles.right.y)
+        self.assertEqual(game_state.cars[0].state.rot_mat.right.z, angles.right.z)
+
+        self.assertEqual(game_state.cars[0].state.rot_mat.up.x, angles.up.x)
+        self.assertEqual(game_state.cars[0].state.rot_mat.up.y, angles.up.y)
+        self.assertEqual(game_state.cars[0].state.rot_mat.up.z, angles.up.z)
+
+        self.assertEqual(game_state.cars[0].state.boost, 100)
+
+        arena.set_game_state(game_state)
+
+        game_state2 = arena.get_game_state()
+
+        self.assertEqual(game_state2.ball.pos.x, game_state.ball.pos.x)
+        self.assertEqual(game_state2.ball.pos.y, game_state.ball.pos.y)
+        # test will fail without rounding due to floating point error
+        self.assertEqual(round(game_state2.ball.pos.z, 4), game_state.ball.pos.z)
+
+        self.assertEqual(game_state2.ball.vel.x, game_state.ball.vel.x)
+        self.assertEqual(game_state2.ball.vel.y, game_state.ball.vel.y)
+        self.assertEqual(game_state2.ball.vel.z, game_state.ball.vel.z)
+
+        self.assertEqual(game_state2.cars[0].state.pos.x, game_state.cars[0].state.pos.x)
+        self.assertEqual(game_state2.cars[0].state.pos.y, game_state.cars[0].state.pos.y)
+        self.assertEqual(game_state2.cars[0].state.pos.z, game_state.cars[0].state.pos.z)
+
+        self.assertEqual(game_state2.cars[0].state.rot_mat.forward.x, game_state.cars[0].state.rot_mat.forward.x)
+        self.assertEqual(game_state2.cars[0].state.rot_mat.forward.y, game_state.cars[0].state.rot_mat.forward.y)
+        self.assertEqual(game_state2.cars[0].state.rot_mat.forward.z, game_state.cars[0].state.rot_mat.forward.z)
+
+        self.assertEqual(game_state2.cars[0].state.rot_mat.right.x, game_state.cars[0].state.rot_mat.right.x)
+        self.assertEqual(game_state2.cars[0].state.rot_mat.right.y, game_state.cars[0].state.rot_mat.right.y)
+        self.assertEqual(game_state2.cars[0].state.rot_mat.right.z, game_state.cars[0].state.rot_mat.right.z)
+
+        self.assertEqual(game_state2.cars[0].state.rot_mat.up.x, game_state.cars[0].state.rot_mat.up.x)
+        self.assertEqual(game_state2.cars[0].state.rot_mat.up.y, game_state.cars[0].state.rot_mat.up.y)
+        self.assertEqual(game_state2.cars[0].state.rot_mat.up.z, game_state.cars[0].state.rot_mat.up.z)
+
+        self.assertEqual(game_state2.cars[0].state.boost, game_state.cars[0].state.boost)
+
+        # print(repr(game_state2))

@@ -91,6 +91,17 @@ pub struct RotMat {
     pub up: Py<Vec3>,
 }
 
+impl PyDefault for RotMat {
+    #[inline]
+    fn py_default(py: Python) -> PyResult<Self> {
+        Ok(Self {
+            forward: new_gil_default!(Vec3, py),
+            right: new_gil_default!(Vec3, py),
+            up: new_gil_default!(Vec3, py),
+        })
+    }
+}
+
 impl FromGil<CRotMat> for RotMat {
     #[inline]
     fn from_gil(py: Python, mat: CRotMat) -> PyResult<Self> {
@@ -173,7 +184,7 @@ impl RotMat {
     }
 
     #[inline]
-    fn __repr__(&self, py: Python) -> String {
+    pub fn __repr__(&self, py: Python) -> String {
         format!(
             "RotMat({}, {}, {})",
             self.forward.borrow(py).__repr__(),

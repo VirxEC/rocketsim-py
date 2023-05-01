@@ -26,20 +26,23 @@ if __name__ == "__main__":
     arena = Arena(GameMode.Soccar)
     print(f"Arena tick rate: {arena.get_tick_rate()}")
 
-    ball = arena.get_ball()
-    ball.pos.z = 1500
-    arena.set_ball(ball)
-    print("Set ball state")
-
     car_id = arena.add_car(Team.Blue, CarConfig.octane())
     print(f"ID of added car: {car_id}")
 
-    car = arena.get_car(car_id)
+    game_state = arena.get_game_state()
+    print("Got game state")
+
+    game_state.ball.pos.z = 1500
+    print("Configured ball state")
+
+    car = game_state.cars[0].state
     car.pos = Vec3(0, 0, 1050)
     car.rot_mat = RotMat.from_angles(0, 1.1, 0)
     car.boost = 100
-    arena.set_car(car_id, car)
-    print("Set car state")
+    print("Configured car state")
+
+    arena.set_game_state(game_state)
+    print("Set game state")
 
     arena.set_car_controls(car_id, CarControls(boost=True))
     print("Set car controls")

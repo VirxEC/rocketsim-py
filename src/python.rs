@@ -4,11 +4,13 @@ use rocketsim_rs::{autocxx::prelude::*, cxx::UniquePtr, glam_ext::glam::Quat, si
 use crate::{
     base::{FromGil, IntoGil, PyDefault, RemoveGil, RotMat, Vec3},
     new_gil, new_gil_default,
+    state::{CarInfo, GameState},
 };
 
 #[pyclass(module = "rocketsim.sim")]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
 pub enum Team {
+    #[default]
     Blue,
     Orange,
 }
@@ -121,16 +123,16 @@ pub struct Ball {
     ang_vel: Py<Vec3>,
 }
 
-// impl PyDefault for Ball {
-//     #[inline]
-//     fn py_default(py: Python) -> PyResult<Self> {
-//         Ok(Self {
-//             pos: new_gil!(Vec3, py, Vec3::ZERO),
-//             vel: new_gil!(Vec3, py, Vec3::ZERO),
-//             ang_vel: new_gil!(Vec3, py, Vec3::ZERO),
-//         })
-//     }
-// }
+impl PyDefault for Ball {
+    #[inline]
+    fn py_default(py: Python) -> PyResult<Self> {
+        Ok(Self {
+            pos: new_gil_default!(Vec3, py),
+            vel: new_gil_default!(Vec3, py),
+            ang_vel: new_gil_default!(Vec3, py),
+        })
+    }
+}
 
 impl FromGil<csim::BallState> for Ball {
     #[inline]
@@ -204,7 +206,7 @@ impl Ball {
     }
 
     #[inline]
-    fn __repr__(&self, py: Python) -> String {
+    pub fn __repr__(&self, py: Python) -> String {
         format!(
             "Ball(pos={}, vel={}, ang_vel={})",
             self.pos.borrow(py).__repr__(),
@@ -325,6 +327,32 @@ pub struct CarConfig {
     dodge_deadzone: f32,
 }
 
+impl PyDefault for CarConfig {
+    #[inline]
+    fn py_default(py: Python) -> PyResult<Self> {
+        Ok(Self {
+            hitbox_size: new_gil_default!(Vec3, py),
+            hitbox_pos_offset: new_gil_default!(Vec3, py),
+            front_wheels: new_gil_default!(WheelPairConfig, py),
+            back_wheels: new_gil_default!(WheelPairConfig, py),
+            dodge_deadzone: 0.,
+        })
+    }
+}
+
+impl FromGil<csim::CarConfig> for CarConfig {
+    #[inline]
+    fn from_gil(py: Python, config: csim::CarConfig) -> PyResult<Self> {
+        Ok(Self {
+            hitbox_size: new_gil!(Vec3, py, config.hitbox_size),
+            hitbox_pos_offset: new_gil!(Vec3, py, config.hitbox_pos_offset),
+            front_wheels: new_gil!(WheelPairConfig, py, config.front_wheels),
+            back_wheels: new_gil!(WheelPairConfig, py, config.back_wheels),
+            dodge_deadzone: config.dodge_deadzone,
+        })
+    }
+}
+
 impl FromGil<&'static csim::CarConfig> for CarConfig {
     #[inline]
     fn from_gil(py: Python, config: &'static csim::CarConfig) -> PyResult<Self> {
@@ -421,7 +449,7 @@ impl CarConfig {
     }
 
     #[inline]
-    fn __repr__(&self, py: Python) -> String {
+    pub fn __repr__(&self, py: Python) -> String {
         format!(
             "CarConfig(hitbox_size={}, hitbox_pos_offset={}, front_wheels={}, back_wheels={}, dodge_deadzone={})",
             self.hitbox_size.borrow(py).__repr__(),
@@ -780,7 +808,7 @@ impl Car {
     }
 
     #[inline]
-    fn __str__(&self) -> String {
+    pub fn __str__(&self) -> String {
         format!("{self:?}")
     }
 
@@ -978,6 +1006,32 @@ impl Arena {
         self.0.pin_mut().set_pad_state(index, state.into())
     }
 
+    #[inline]
+    fn get_game_state(&mut self, py: Python) -> PyResult<GameState> {
+        Ok(GameState {
+            tick_rate: self.0.get_tick_rate(),
+            tick_count: self.0.get_tick_count(),
+            ball: new_gil!(Ball, py, self.0.pin_mut().get_ball()),
+            ball_rot: new_gil!(RotMat, py, Quat::from_array(self.0.pin_mut().get_ball_rotation())),
+            cars: self
+                .0
+                .GetCars()
+                .iter()
+                .flat_map(|&car_id| self.0.pin_mut().get_car_info(car_id).into_gil(py).and_then(|car: CarInfo| Py::new(py, car)))
+                .collect(),
+            // pads: self.iter_pads().collect(),
+        })
+    }
+
+    #[inline]
+    fn set_game_state(&mut self, py: Python, game_state: GameState) -> PyResult<()> {
+        self.0
+            .pin_mut()
+            .set_game_state(&game_state.remove_gil(py))
+            .map_err(|e| PyIndexError::new_err(e.to_string()))
+    }
+
+    #[inline]
     fn set_goal_scored_callback(&mut self, py: Python, callback: PyObject) {
         self.0.pin_mut().set_goal_scored_callback(
             |_, team, user_info| {
