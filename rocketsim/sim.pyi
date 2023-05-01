@@ -26,7 +26,7 @@ class Ball:
     vel: Vec3
     ang_vel: Vec3
 
-    def __init__() -> Ball: ...
+    def __init__(pos: Vec3 = Vec3(), vel: Vec3 = Vec3(), ang_vel: Vec3 = Vec3()) -> Ball: ...
     def __str__(self) -> str: ...
 
 class CarControls:
@@ -79,13 +79,38 @@ class Car:
 
     def get_contacting_car(self, arena: Arena) -> Optional[Car]: ...
 
-class CarConfig(Enum):
-    Octane = 0
-    Dominus = 1
-    Plank = 2
-    Breakout = 3
-    Hybrid = 4
-    Merc = 5
+class WheelPairConfig:
+    wheel_radius: float
+    suspension_rest_length: float
+    connection_point_offset: Vec3
+
+    def __init__(wheel_radius: float = 0, suspension_rest_length: float = 0, connection_point_offset: Vec3 = Vec3()) -> WheelPairConfig: ...
+    def __str__(self) -> str: ...
+    def __repr__(self) -> str: ...
+
+class CarConfig:
+    hitbox_size: Vec3
+    hitbox_pos_offset: Vec3
+    front_wheel: WheelPairConfig
+    rear_wheel: WheelPairConfig
+    dodge_deadzone: float
+
+    def __init__(hitbox_size: Vec3 = Vec3(), hitbox_pos_offset: Vec3 = Vec3(), front_wheel: WheelPairConfig = WheelPairConfig(), back_wheel: WheelPairConfig = WheelPairConfig(), dodge_deadzone: float = 0) -> CarConfig: ...
+    def __str__(self) -> str: ...
+    def __repr__(self) -> str: ...
+
+    @staticmethod
+    def octane() -> CarConfig: ...
+    @staticmethod
+    def dominus() -> CarConfig: ...
+    @staticmethod
+    def breakout() -> CarConfig: ...
+    @staticmethod
+    def hybrid() -> CarConfig: ...
+    @staticmethod
+    def plank() -> CarConfig: ...
+    @staticmethod
+    def merc() -> CarConfig: ...
 
 class BoostPad:
     pos: Vec3

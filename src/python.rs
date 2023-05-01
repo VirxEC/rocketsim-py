@@ -1,7 +1,10 @@
 use pyo3::{exceptions::PyIndexError, prelude::*, types::PyTuple};
 use rocketsim_rs::{autocxx::prelude::*, cxx::UniquePtr, glam_ext::glam::Quat, sim as csim};
 
-use crate::base::{RotMat, Vec3};
+use crate::{
+    base::{FromGil, IntoGil, PyDefault, RemoveGil, RotMat, Vec3},
+    new_gil, new_gil_default,
+};
 
 #[pyclass(module = "rocketsim.sim")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -49,40 +52,54 @@ impl From<GameMode> for csim::GameMode {
 }
 
 #[pyclass(get_all, set_all, module = "rocketsim.sim")]
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Debug)]
 pub struct BallHitInfo {
     is_valid: bool,
-    relative_pos_on_ball: Vec3,
-    ball_pos: Vec3,
-    extra_hit_vel: Vec3,
+    relative_pos_on_ball: Py<Vec3>,
+    ball_pos: Py<Vec3>,
+    extra_hit_vel: Py<Vec3>,
     tick_count_when_hit: u64,
     tick_count_when_extra_impulse_applied: u64,
 }
 
-impl From<csim::BallHitInfo> for BallHitInfo {
+impl PyDefault for BallHitInfo {
     #[inline]
-    fn from(hit: csim::BallHitInfo) -> Self {
-        Self {
-            is_valid: hit.is_valid,
-            relative_pos_on_ball: hit.relative_pos_on_ball.into(),
-            ball_pos: hit.ball_pos.into(),
-            extra_hit_vel: hit.extra_hit_vel.into(),
-            tick_count_when_hit: hit.tick_count_when_hit,
-            tick_count_when_extra_impulse_applied: hit.tick_count_when_extra_impulse_applied,
-        }
+    fn py_default(py: Python) -> PyResult<Self> {
+        Ok(Self {
+            is_valid: false,
+            relative_pos_on_ball: new_gil_default!(Vec3, py),
+            ball_pos: new_gil_default!(Vec3, py),
+            extra_hit_vel: new_gil_default!(Vec3, py),
+            tick_count_when_hit: 0,
+            tick_count_when_extra_impulse_applied: 0,
+        })
     }
 }
 
-impl From<BallHitInfo> for csim::BallHitInfo {
+impl FromGil<csim::BallHitInfo> for BallHitInfo {
     #[inline]
-    fn from(hit: BallHitInfo) -> Self {
-        Self {
+    fn from_gil(py: Python, hit: csim::BallHitInfo) -> PyResult<Self> {
+        Ok(Self {
             is_valid: hit.is_valid,
-            relative_pos_on_ball: hit.relative_pos_on_ball.into(),
-            ball_pos: hit.ball_pos.into(),
-            extra_hit_vel: hit.extra_hit_vel.into(),
+            relative_pos_on_ball: new_gil!(Vec3, py, hit.relative_pos_on_ball),
+            ball_pos: new_gil!(Vec3, py, hit.ball_pos),
+            extra_hit_vel: new_gil!(Vec3, py, hit.extra_hit_vel),
             tick_count_when_hit: hit.tick_count_when_hit,
             tick_count_when_extra_impulse_applied: hit.tick_count_when_extra_impulse_applied,
+        })
+    }
+}
+
+impl RemoveGil<csim::BallHitInfo> for &BallHitInfo {
+    #[inline]
+    fn remove_gil(self, py: Python) -> csim::BallHitInfo {
+        csim::BallHitInfo {
+            is_valid: self.is_valid,
+            relative_pos_on_ball: self.relative_pos_on_ball.clone().remove_gil(py),
+            ball_pos: self.ball_pos.clone().remove_gil(py),
+            extra_hit_vel: self.extra_hit_vel.clone().remove_gil(py),
+            tick_count_when_hit: self.tick_count_when_hit,
+            tick_count_when_extra_impulse_applied: self.tick_count_when_extra_impulse_applied,
         }
     }
 }
@@ -91,77 +108,364 @@ impl From<BallHitInfo> for csim::BallHitInfo {
 impl BallHitInfo {
     #[new]
     #[inline]
-    fn __new__() -> Self {
-        Self::default()
+    fn __new__(py: Python) -> PyResult<Self> {
+        Self::py_default(py)
     }
 }
 
 #[pyclass(get_all, set_all, module = "rocketsim.sim")]
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Debug)]
 pub struct Ball {
-    pos: Vec3,
-    vel: Vec3,
-    ang_vel: Vec3,
+    pos: Py<Vec3>,
+    vel: Py<Vec3>,
+    ang_vel: Py<Vec3>,
 }
 
-impl From<csim::BallState> for Ball {
+// impl PyDefault for Ball {
+//     #[inline]
+//     fn py_default(py: Python) -> PyResult<Self> {
+//         Ok(Self {
+//             pos: new_gil!(Vec3, py, Vec3::ZERO),
+//             vel: new_gil!(Vec3, py, Vec3::ZERO),
+//             ang_vel: new_gil!(Vec3, py, Vec3::ZERO),
+//         })
+//     }
+// }
+
+impl FromGil<csim::BallState> for Ball {
     #[inline]
-    fn from(ball: csim::BallState) -> Self {
-        Self {
-            pos: ball.pos.into(),
-            vel: ball.vel.into(),
-            ang_vel: ball.ang_vel.into(),
+    fn from_gil(py: Python, ball: csim::BallState) -> PyResult<Self> {
+        Ok(Self {
+            pos: new_gil!(Vec3, py, ball.pos),
+            vel: new_gil!(Vec3, py, ball.vel),
+            ang_vel: new_gil!(Vec3, py, ball.ang_vel),
+        })
+    }
+}
+
+impl RemoveGil<csim::BallState> for Ball {
+    #[inline]
+    fn remove_gil(self, py: Python) -> csim::BallState {
+        csim::BallState {
+            pos: self.pos.remove_gil(py),
+            vel: self.vel.remove_gil(py),
+            ang_vel: self.ang_vel.remove_gil(py),
         }
     }
 }
 
-impl From<Ball> for csim::BallState {
+impl RemoveGil<csim::BallState> for &Ball {
     #[inline]
-    fn from(ball: Ball) -> Self {
-        Self {
-            pos: ball.pos.into(),
-            vel: ball.vel.into(),
-            ang_vel: ball.ang_vel.into(),
+    fn remove_gil(self, py: Python) -> csim::BallState {
+        csim::BallState {
+            pos: self.pos.clone().remove_gil(py),
+            vel: self.vel.clone().remove_gil(py),
+            ang_vel: self.ang_vel.clone().remove_gil(py),
         }
     }
+}
+
+impl Ball {
+    const NAMES: [&'static str; 3] = ["pos", "vel", "ang_vel"];
+    const ITEM_NONE: Option<Py<Vec3>> = None;
 }
 
 #[pymethods]
 impl Ball {
     #[new]
-    #[inline]
-    fn __new__() -> Self {
-        Self::default()
+    #[pyo3(signature = (*args, **kwargs))]
+    fn __new__(py: Python, args: &PyTuple, kwargs: Option<&PyAny>) -> PyResult<Self> {
+        let mut vals = [Self::ITEM_NONE; Self::NAMES.len()];
+
+        for (arg, val) in args.into_iter().zip(vals.iter_mut()) {
+            if let Ok(item) = arg.extract() {
+                *val = Some(item);
+            }
+        }
+
+        if let Some(kwargs) = kwargs {
+            for (name, val) in Self::NAMES.iter().zip(vals.iter_mut()) {
+                if let Ok(item) = kwargs.get_item(name).and_then(PyAny::extract) {
+                    *val = Some(item);
+                }
+            }
+        }
+
+        Ok(Self {
+            pos: vals[0].take().unwrap_or(new_gil!(Vec3, py, Vec3::ZERO)),
+            vel: vals[1].take().unwrap_or(new_gil!(Vec3, py, Vec3::ZERO)),
+            ang_vel: vals[2].take().unwrap_or(new_gil!(Vec3, py, Vec3::ZERO)),
+        })
     }
 
     #[inline]
     fn __str__(&self) -> String {
         format!("{self:?}")
     }
-}
 
-#[pyclass(module = "rocketsim.sim")]
-#[derive(Clone, Copy, Debug)]
-pub enum CarConfig {
-    Octane,
-    Dominus,
-    Plank,
-    Breakout,
-    Hybrid,
-    Merc,
-}
-
-impl From<&CarConfig> for &'static csim::CarConfig {
     #[inline]
-    fn from(config: &CarConfig) -> Self {
-        match config {
-            CarConfig::Octane => csim::CarConfig::octane(),
-            CarConfig::Dominus => csim::CarConfig::dominus(),
-            CarConfig::Plank => csim::CarConfig::plank(),
-            CarConfig::Breakout => csim::CarConfig::breakout(),
-            CarConfig::Hybrid => csim::CarConfig::hybrid(),
-            CarConfig::Merc => csim::CarConfig::merc(),
+    fn __repr__(&self, py: Python) -> String {
+        format!(
+            "Ball(pos={}, vel={}, ang_vel={})",
+            self.pos.borrow(py).__repr__(),
+            self.vel.borrow(py).__repr__(),
+            self.ang_vel.borrow(py).__repr__()
+        )
+    }
+}
+
+#[pyclass(get_all, set_all, module = "rocketsim.sim")]
+#[derive(Clone, Debug)]
+pub struct WheelPairConfig {
+    wheel_radius: f32,
+    suspension_rest_length: f32,
+    connection_point_offset: Py<Vec3>,
+}
+
+impl PyDefault for WheelPairConfig {
+    #[inline]
+    fn py_default(py: Python) -> PyResult<Self> {
+        Ok(Self {
+            wheel_radius: 0.0,
+            suspension_rest_length: 0.0,
+            connection_point_offset: new_gil!(Vec3, py, Vec3::ZERO),
+        })
+    }
+}
+
+impl RemoveGil<csim::WheelPairConfig> for &WheelPairConfig {
+    #[inline]
+    fn remove_gil(self, py: Python) -> csim::WheelPairConfig {
+        csim::WheelPairConfig {
+            wheel_radius: self.wheel_radius,
+            suspension_rest_length: self.suspension_rest_length,
+            connection_point_offset: self.connection_point_offset.clone().remove_gil(py),
         }
+    }
+}
+
+impl FromGil<csim::WheelPairConfig> for WheelPairConfig {
+    #[inline]
+    fn from_gil(py: Python, config: csim::WheelPairConfig) -> PyResult<Self> {
+        Ok(Self {
+            wheel_radius: config.wheel_radius,
+            suspension_rest_length: config.suspension_rest_length,
+            connection_point_offset: new_gil!(Vec3, py, config.connection_point_offset),
+        })
+    }
+}
+
+#[pymethods]
+impl WheelPairConfig {
+    #[new]
+    #[pyo3(signature = (*args, **kwargs))]
+    fn __new__(py: Python, args: &PyTuple, kwargs: Option<&PyAny>) -> PyResult<Self> {
+        let mut wheel_radius = None;
+        let mut suspension_rest_length = None;
+        let mut connection_point_offset = None;
+
+        if !args.is_empty() {
+            if let Ok(arg) = args.get_item(0).and_then(PyAny::extract) {
+                wheel_radius = Some(arg);
+
+                if let Ok(arg) = args.get_item(1).and_then(PyAny::extract) {
+                    suspension_rest_length = Some(arg);
+
+                    if let Ok(arg) = args.get_item(2).and_then(PyAny::extract) {
+                        connection_point_offset = Some(arg);
+                    }
+                }
+            }
+        }
+
+        if let Some(kwargs) = kwargs {
+            if let Ok(x) = kwargs.get_item("wheel_radius").and_then(PyAny::extract) {
+                wheel_radius = Some(x);
+            }
+
+            if let Ok(x) = kwargs.get_item("suspension_rest_length").and_then(PyAny::extract) {
+                suspension_rest_length = Some(x);
+            }
+
+            if let Ok(x) = kwargs.get_item("connection_point_offset").and_then(PyAny::extract) {
+                connection_point_offset = Some(x);
+            }
+        }
+
+        Ok(Self {
+            wheel_radius: wheel_radius.unwrap_or_default(),
+            suspension_rest_length: suspension_rest_length.unwrap_or_default(),
+            connection_point_offset: connection_point_offset.unwrap_or(new_gil!(Vec3, py, Vec3::ZERO)),
+        })
+    }
+
+    #[inline]
+    fn __str__(&self) -> String {
+        format!("{self:?}")
+    }
+
+    #[inline]
+    fn __repr__(&self, py: Python) -> String {
+        format!(
+            "WheelPairConfig(wheel_radius={}, suspension_rest_length={}, connection_point_offset={})",
+            self.wheel_radius,
+            self.suspension_rest_length,
+            self.connection_point_offset.borrow(py).__repr__()
+        )
+    }
+}
+
+#[pyclass(get_all, set_all, module = "rocketsim.sim")]
+#[derive(Clone, Debug)]
+pub struct CarConfig {
+    hitbox_size: Py<Vec3>,
+    hitbox_pos_offset: Py<Vec3>,
+    front_wheels: Py<WheelPairConfig>,
+    back_wheels: Py<WheelPairConfig>,
+    dodge_deadzone: f32,
+}
+
+impl FromGil<&'static csim::CarConfig> for CarConfig {
+    #[inline]
+    fn from_gil(py: Python, config: &'static csim::CarConfig) -> PyResult<Self> {
+        Ok(Self {
+            hitbox_size: new_gil!(Vec3, py, config.hitbox_size),
+            hitbox_pos_offset: new_gil!(Vec3, py, config.hitbox_pos_offset),
+            front_wheels: new_gil!(WheelPairConfig, py, config.front_wheels),
+            back_wheels: new_gil!(WheelPairConfig, py, config.back_wheels),
+            dodge_deadzone: config.dodge_deadzone,
+        })
+    }
+}
+
+impl RemoveGil<csim::CarConfig> for &CarConfig {
+    #[inline]
+    fn remove_gil(self, py: Python) -> csim::CarConfig {
+        csim::CarConfig {
+            hitbox_size: self.hitbox_size.clone().remove_gil(py),
+            hitbox_pos_offset: self.hitbox_pos_offset.clone().remove_gil(py),
+            front_wheels: self.front_wheels.borrow(py).remove_gil(py),
+            back_wheels: self.back_wheels.borrow(py).remove_gil(py),
+            dodge_deadzone: self.dodge_deadzone,
+        }
+    }
+}
+
+#[pymethods]
+impl CarConfig {
+    #[new]
+    #[pyo3(signature = (*args, **kwargs))]
+    fn __new__(py: Python, args: &PyTuple, kwargs: Option<&PyAny>) -> PyResult<Self> {
+        let mut hitbox_size = None;
+        let mut hitbox_pos_offset = None;
+        let mut front_wheels = None;
+        let mut back_wheels = None;
+        let mut dodge_deadzone = None;
+
+        if !args.is_empty() {
+            if let Ok(arg) = args.get_item(0).and_then(PyAny::extract) {
+                hitbox_size = Some(arg);
+
+                if let Ok(arg) = args.get_item(1).and_then(PyAny::extract) {
+                    hitbox_pos_offset = Some(arg);
+
+                    if let Ok(arg) = args.get_item(2).and_then(PyAny::extract) {
+                        front_wheels = Some(arg);
+
+                        if let Ok(arg) = args.get_item(3).and_then(PyAny::extract) {
+                            back_wheels = Some(arg);
+
+                            if let Ok(arg) = args.get_item(4).and_then(PyAny::extract) {
+                                dodge_deadzone = Some(arg);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if let Some(kwargs) = kwargs {
+            if let Ok(x) = kwargs.get_item("hitbox_size").and_then(PyAny::extract) {
+                hitbox_size = Some(x);
+            }
+
+            if let Ok(x) = kwargs.get_item("hitbox_pos_offset").and_then(PyAny::extract) {
+                hitbox_pos_offset = Some(x);
+            }
+
+            if let Ok(x) = kwargs.get_item("front_wheels").and_then(PyAny::extract) {
+                front_wheels = Some(x);
+            }
+
+            if let Ok(x) = kwargs.get_item("back_wheels").and_then(PyAny::extract) {
+                back_wheels = Some(x);
+            }
+
+            if let Ok(x) = kwargs.get_item("dodge_deadzone").and_then(PyAny::extract) {
+                dodge_deadzone = Some(x);
+            }
+        }
+
+        Ok(Self {
+            hitbox_size: hitbox_size.unwrap_or(new_gil!(Vec3, py, Vec3::ZERO)),
+            hitbox_pos_offset: hitbox_pos_offset.unwrap_or(new_gil!(Vec3, py, Vec3::ZERO)),
+            front_wheels: front_wheels.unwrap_or(new_gil_default!(WheelPairConfig, py)),
+            back_wheels: back_wheels.unwrap_or(new_gil_default!(WheelPairConfig, py)),
+            dodge_deadzone: dodge_deadzone.unwrap_or_default(),
+        })
+    }
+
+    #[inline]
+    fn __str__(&self) -> String {
+        format!("{self:?}")
+    }
+
+    #[inline]
+    fn __repr__(&self, py: Python) -> String {
+        format!(
+            "CarConfig(hitbox_size={}, hitbox_pos_offset={}, front_wheels={}, back_wheels={}, dodge_deadzone={})",
+            self.hitbox_size.borrow(py).__repr__(),
+            self.hitbox_pos_offset.borrow(py).__repr__(),
+            self.front_wheels.borrow(py).__repr__(py),
+            self.back_wheels.borrow(py).__repr__(py),
+            self.dodge_deadzone
+        )
+    }
+
+    #[inline]
+    #[staticmethod]
+    fn octane(py: Python) -> PyResult<Self> {
+        csim::CarConfig::octane().into_gil(py)
+    }
+
+    #[inline]
+    #[staticmethod]
+    fn dominus(py: Python) -> PyResult<Self> {
+        csim::CarConfig::dominus().into_gil(py)
+    }
+
+    #[inline]
+    #[staticmethod]
+    fn plank(py: Python) -> PyResult<Self> {
+        csim::CarConfig::plank().into_gil(py)
+    }
+
+    #[inline]
+    #[staticmethod]
+    fn breakout(py: Python) -> PyResult<Self> {
+        csim::CarConfig::breakout().into_gil(py)
+    }
+
+    #[inline]
+    #[staticmethod]
+    fn hybrid(py: Python) -> PyResult<Self> {
+        csim::CarConfig::hybrid().into_gil(py)
+    }
+
+    #[inline]
+    #[staticmethod]
+    fn merc(py: Python) -> PyResult<Self> {
+        csim::CarConfig::merc().into_gil(py)
     }
 }
 
@@ -286,17 +590,17 @@ impl CarControls {
 }
 
 #[pyclass(get_all, set_all, module = "rocketsim.sim")]
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Debug)]
 pub struct Car {
-    pos: Vec3,
-    rot_mat: RotMat,
-    vel: Vec3,
-    ang_vel: Vec3,
+    pos: Py<Vec3>,
+    rot_mat: Py<RotMat>,
+    vel: Py<Vec3>,
+    ang_vel: Py<Vec3>,
     is_on_ground: bool,
     has_jumped: bool,
     has_double_jumped: bool,
     has_flipped: bool,
-    last_rel_dodge_torque: Vec3,
+    last_rel_dodge_torque: Py<Vec3>,
     jump_time: f32,
     flip_time: f32,
     is_jumping: bool,
@@ -310,28 +614,65 @@ pub struct Car {
     auto_flip_timer: f32,
     auto_flip_torque_scale: f32,
     has_contact: bool,
-    contact_normal: Vec3,
+    contact_normal: Py<Vec3>,
     other_car_id: u32,
     cooldown_timer: f32,
     is_demoed: bool,
     demo_respawn_timer: f32,
-    ball_hit_info: BallHitInfo,
-    last_controls: CarControls,
+    ball_hit_info: Py<BallHitInfo>,
+    last_controls: Py<CarControls>,
 }
 
-impl From<csim::CarState> for Car {
+impl PyDefault for Car {
     #[inline]
-    fn from(car: csim::CarState) -> Self {
-        Self {
-            pos: car.pos.into(),
-            rot_mat: car.rot_mat.into(),
-            vel: car.vel.into(),
-            ang_vel: car.ang_vel.into(),
+    fn py_default(py: Python) -> PyResult<Self> {
+        Ok(Self {
+            pos: new_gil!(Vec3, py, Vec3::ZERO),
+            rot_mat: new_gil!(RotMat, py, RotMat::identity(py)?),
+            vel: new_gil!(Vec3, py, Vec3::ZERO),
+            ang_vel: new_gil!(Vec3, py, Vec3::ZERO),
+            is_on_ground: false,
+            has_jumped: false,
+            has_double_jumped: false,
+            has_flipped: false,
+            last_rel_dodge_torque: new_gil!(Vec3, py, Vec3::ZERO),
+            jump_time: 0.0,
+            flip_time: 0.0,
+            is_jumping: false,
+            air_time_since_jump: 0.0,
+            boost: 0.0,
+            time_spent_boosting: 0.0,
+            is_supersonic: false,
+            supersonic_time: 0.0,
+            handbrake_val: 0.0,
+            is_auto_flipping: false,
+            auto_flip_timer: 0.0,
+            auto_flip_torque_scale: 0.0,
+            has_contact: false,
+            contact_normal: new_gil!(Vec3, py, Vec3::ZERO),
+            other_car_id: 0,
+            cooldown_timer: 0.0,
+            is_demoed: false,
+            demo_respawn_timer: 0.0,
+            ball_hit_info: new_gil_default!(BallHitInfo, py),
+            last_controls: new_gil_default!(CarControls, py),
+        })
+    }
+}
+
+impl FromGil<csim::CarState> for Car {
+    #[inline]
+    fn from_gil(py: Python, car: csim::CarState) -> PyResult<Self> {
+        Ok(Self {
+            pos: new_gil!(Vec3, py, car.pos),
+            rot_mat: new_gil!(RotMat, py, car.rot_mat),
+            vel: new_gil!(Vec3, py, car.vel),
+            ang_vel: new_gil!(Vec3, py, car.ang_vel),
             is_on_ground: car.is_on_ground,
             has_jumped: car.has_jumped,
             has_double_jumped: car.has_double_jumped,
             has_flipped: car.has_flipped,
-            last_rel_dodge_torque: car.last_rel_dodge_torque.into(),
+            last_rel_dodge_torque: new_gil!(Vec3, py, car.last_rel_dodge_torque),
             jump_time: car.jump_time,
             flip_time: car.flip_time,
             is_jumping: car.is_jumping,
@@ -345,50 +686,87 @@ impl From<csim::CarState> for Car {
             auto_flip_timer: car.auto_flip_timer,
             auto_flip_torque_scale: car.auto_flip_torque_scale,
             has_contact: car.has_contact,
-            contact_normal: car.contact_normal.into(),
+            contact_normal: new_gil!(Vec3, py, car.contact_normal),
             other_car_id: car.other_car_id,
             cooldown_timer: car.cooldown_timer,
             is_demoed: car.is_demoed,
             demo_respawn_timer: car.demo_respawn_timer,
-            ball_hit_info: car.ball_hit_info.into(),
-            last_controls: car.last_controls.into(),
+            ball_hit_info: new_gil!(BallHitInfo, py, car.ball_hit_info),
+            last_controls: new_gil!(CarControls, py, car.last_controls),
+        })
+    }
+}
+
+impl RemoveGil<csim::CarState> for &Car {
+    #[inline]
+    fn remove_gil(self, py: Python) -> csim::CarState {
+        csim::CarState {
+            pos: self.pos.clone().remove_gil(py),
+            rot_mat: self.rot_mat.borrow(py).clone().remove_gil(py),
+            vel: self.vel.clone().remove_gil(py),
+            ang_vel: self.ang_vel.clone().remove_gil(py),
+            is_on_ground: self.is_on_ground,
+            has_jumped: self.has_jumped,
+            has_double_jumped: self.has_double_jumped,
+            has_flipped: self.has_flipped,
+            last_rel_dodge_torque: self.last_rel_dodge_torque.clone().remove_gil(py),
+            jump_time: self.jump_time,
+            flip_time: self.flip_time,
+            is_jumping: self.is_jumping,
+            air_time_since_jump: self.air_time_since_jump,
+            boost: self.boost,
+            time_spent_boosting: self.time_spent_boosting,
+            is_supersonic: self.is_supersonic,
+            supersonic_time: self.supersonic_time,
+            handbrake_val: self.handbrake_val,
+            is_auto_flipping: self.is_auto_flipping,
+            auto_flip_timer: self.auto_flip_timer,
+            auto_flip_torque_scale: self.auto_flip_torque_scale,
+            has_contact: self.has_contact,
+            contact_normal: self.contact_normal.clone().remove_gil(py),
+            other_car_id: self.other_car_id,
+            cooldown_timer: self.cooldown_timer,
+            is_demoed: self.is_demoed,
+            demo_respawn_timer: self.demo_respawn_timer,
+            ball_hit_info: self.ball_hit_info.borrow(py).remove_gil(py),
+            last_controls: self.last_controls.clone().remove_gil(py),
         }
     }
 }
 
-impl From<Car> for csim::CarState {
+impl RemoveGil<csim::CarState> for Car {
     #[inline]
-    fn from(car: Car) -> Self {
-        Self {
-            pos: car.pos.into(),
-            rot_mat: car.rot_mat.into(),
-            vel: car.vel.into(),
-            ang_vel: car.ang_vel.into(),
-            is_on_ground: car.is_on_ground,
-            has_jumped: car.has_jumped,
-            has_double_jumped: car.has_double_jumped,
-            has_flipped: car.has_flipped,
-            last_rel_dodge_torque: car.last_rel_dodge_torque.into(),
-            jump_time: car.jump_time,
-            flip_time: car.flip_time,
-            is_jumping: car.is_jumping,
-            air_time_since_jump: car.air_time_since_jump,
-            boost: car.boost,
-            time_spent_boosting: car.time_spent_boosting,
-            is_supersonic: car.is_supersonic,
-            supersonic_time: car.supersonic_time,
-            handbrake_val: car.handbrake_val,
-            is_auto_flipping: car.is_auto_flipping,
-            auto_flip_timer: car.auto_flip_timer,
-            auto_flip_torque_scale: car.auto_flip_torque_scale,
-            has_contact: car.has_contact,
-            contact_normal: car.contact_normal.into(),
-            other_car_id: car.other_car_id,
-            cooldown_timer: car.cooldown_timer,
-            is_demoed: car.is_demoed,
-            demo_respawn_timer: car.demo_respawn_timer,
-            ball_hit_info: car.ball_hit_info.into(),
-            last_controls: car.last_controls.into(),
+    fn remove_gil(self, py: Python) -> csim::CarState {
+        csim::CarState {
+            pos: self.pos.remove_gil(py),
+            rot_mat: self.rot_mat.borrow(py).clone().remove_gil(py),
+            vel: self.vel.remove_gil(py),
+            ang_vel: self.ang_vel.remove_gil(py),
+            is_on_ground: self.is_on_ground,
+            has_jumped: self.has_jumped,
+            has_double_jumped: self.has_double_jumped,
+            has_flipped: self.has_flipped,
+            last_rel_dodge_torque: self.last_rel_dodge_torque.remove_gil(py),
+            jump_time: self.jump_time,
+            flip_time: self.flip_time,
+            is_jumping: self.is_jumping,
+            air_time_since_jump: self.air_time_since_jump,
+            boost: self.boost,
+            time_spent_boosting: self.time_spent_boosting,
+            is_supersonic: self.is_supersonic,
+            supersonic_time: self.supersonic_time,
+            handbrake_val: self.handbrake_val,
+            is_auto_flipping: self.is_auto_flipping,
+            auto_flip_timer: self.auto_flip_timer,
+            auto_flip_torque_scale: self.auto_flip_torque_scale,
+            has_contact: self.has_contact,
+            contact_normal: self.contact_normal.remove_gil(py),
+            other_car_id: self.other_car_id,
+            cooldown_timer: self.cooldown_timer,
+            is_demoed: self.is_demoed,
+            demo_respawn_timer: self.demo_respawn_timer,
+            ball_hit_info: self.ball_hit_info.borrow(py).remove_gil(py),
+            last_controls: self.last_controls.remove_gil(py),
         }
     }
 }
@@ -397,8 +775,8 @@ impl From<Car> for csim::CarState {
 impl Car {
     #[new]
     #[inline]
-    fn __new__() -> Self {
-        Self::default()
+    fn __new__(py: Python) -> PyResult<Self> {
+        Self::py_default(py)
     }
 
     #[inline]
@@ -407,13 +785,17 @@ impl Car {
     }
 
     #[inline]
-    fn get_contacting_car(&self, arena: &mut Arena) -> Option<Self> {
-        csim::CarState::from(*self).get_contacting_car(arena.0.pin_mut()).map(Into::into)
+    fn get_contacting_car(&self, py: Python, arena: &mut Arena) -> PyResult<Option<Self>> {
+        Ok(if let Some(car) = self.remove_gil(py).get_contacting_car(arena.0.pin_mut()) {
+            Some(car.into_gil(py)?)
+        } else {
+            None
+        })
     }
 }
 
-#[pyclass(get_all, module = "rocketsim.sim")]
-#[derive(Clone, Debug, PartialEq)]
+#[pyclass(get_all, frozen, module = "rocketsim.sim")]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct BoostPad {
     pos: Vec3,
     is_big: bool,
@@ -526,13 +908,13 @@ impl Arena {
     }
 
     #[inline]
-    fn get_ball(&mut self) -> Ball {
-        self.0.pin_mut().get_ball().into()
+    fn get_ball(&mut self, py: Python) -> PyResult<Ball> {
+        self.0.pin_mut().get_ball().into_gil(py)
     }
 
     #[inline]
-    fn set_ball(&mut self, ball: Ball) {
-        self.0.pin_mut().set_ball(ball.into());
+    fn set_ball(&mut self, py: Python, ball: Ball) {
+        self.0.pin_mut().set_ball(ball.remove_gil(py));
     }
 
     #[inline]
@@ -541,8 +923,8 @@ impl Arena {
     }
 
     #[inline]
-    fn add_car(&mut self, team: Team, config: &CarConfig) -> u32 {
-        self.0.pin_mut().add_car(team.into(), config.into())
+    fn add_car(&mut self, py: Python, team: Team, config: &CarConfig) -> u32 {
+        self.0.pin_mut().add_car(team.into(), &config.remove_gil(py))
     }
 
     #[inline]
@@ -559,18 +941,18 @@ impl Arena {
     }
 
     #[inline]
-    fn get_car(&mut self, id: u32) -> Car {
-        self.0.pin_mut().get_car(id).into()
+    fn get_car(&mut self, py: Python, id: u32) -> PyResult<Car> {
+        self.0.pin_mut().get_car(id).into_gil(py)
     }
 
     #[inline]
-    fn get_ball_rotation(&self) -> RotMat {
-        Quat::from_array(self.0.get_ball_rotation()).into()
+    fn get_ball_rotation(&self, py: Python) -> PyResult<RotMat> {
+        Quat::from_array(self.0.get_ball_rotation()).into_gil(py)
     }
 
     #[inline]
-    fn set_car(&mut self, id: u32, car: Car) -> PyResult<()> {
-        self.0.pin_mut().set_car(id, car.into()).map_err(|e| PyIndexError::new_err(e.to_string()))
+    fn set_car(&mut self, py: Python, id: u32, car: Car) -> PyResult<()> {
+        self.0.pin_mut().set_car(id, car.remove_gil(py)).map_err(|e| PyIndexError::new_err(e.to_string()))
     }
 
     #[inline]

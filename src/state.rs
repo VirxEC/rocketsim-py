@@ -2,7 +2,8 @@ use pyo3::prelude::*;
 use rocketsim_rs::{glam_ext::glam::Quat, CarInfo as CCarInfo, GameState as CGameState};
 
 use crate::{
-    base::RotMat,
+    base::{FromGil, RemoveGil, RotMat},
+    new_gil,
     python::{Ball, Car, Team},
 };
 
@@ -11,18 +12,18 @@ use crate::{
 pub struct CarInfo {
     pub id: u32,
     pub team: Team,
-    pub state: Car,
+    pub state: Py<Car>,
     // pub config: CarConfig,
 }
 
-impl From<CCarInfo> for CarInfo {
+impl FromGil<CCarInfo> for CarInfo {
     #[inline]
-    fn from(info: CCarInfo) -> Self {
-        Self {
+    fn from_gil(py: Python, info: CCarInfo) -> PyResult<Self> {
+        Ok(Self {
             id: info.id,
             team: info.team.into(),
-            state: info.state.into(),
-        }
+            state: new_gil!(Car, py, info.state),
+        })
     }
 }
 
@@ -31,32 +32,32 @@ impl From<CCarInfo> for CarInfo {
 pub struct GameState {
     tick_rate: f32,
     tick_count: u64,
-    ball: Ball,
-    ball_rot: RotMat,
-    cars: Vec<CarInfo>,
+    ball: Py<Ball>,
+    ball_rot: Py<RotMat>,
+    cars: Vec<Py<CarInfo>>,
 }
 
-impl From<CGameState> for GameState {
+impl FromGil<CGameState> for GameState {
     #[inline]
-    fn from(state: CGameState) -> Self {
-        Self {
+    fn from_gil(py: Python, state: CGameState) -> PyResult<Self> {
+        Ok(Self {
             tick_rate: state.tick_rate,
             tick_count: state.tick_count,
-            ball: state.ball.into(),
-            ball_rot: Quat::from_array(state.ball_rot).into(),
-            cars: state.cars.into_iter().map(Into::into).collect(),
-        }
+            ball: new_gil!(Ball, py, state.ball),
+            ball_rot: new_gil!(RotMat, py, Quat::from_array(state.ball_rot)),
+            cars: state.cars.into_iter().flat_map(|car| CarInfo::from_gil(py, car)).flat_map(|car| Py::new(py, car)).collect(),
+        })
     }
 }
 
-impl From<GameState> for CGameState {
+impl RemoveGil<CGameState> for GameState {
     #[inline]
-    fn from(state: GameState) -> Self {
-        Self {
-            tick_rate: state.tick_rate,
-            tick_count: state.tick_count,
-            ball: state.ball.into(),
-            ball_rot: Quat::from(state.ball_rot).to_array(),
+    fn remove_gil(self, py: Python) -> CGameState {
+        CGameState {
+            tick_rate: self.tick_rate,
+            tick_count: self.tick_count,
+            ball: self.ball.borrow(py).clone().remove_gil(py),
+            ball_rot: RemoveGil::<Quat>::remove_gil(self.ball_rot.borrow(py).clone(), py).to_array(),
             cars: Vec::new(),
             pads: Vec::new(),
         }

@@ -9,7 +9,7 @@ from rocketsim import RotMat, Vec3
 from rocketsim.sim import Arena, CarConfig, CarControls, GameMode, Team
 
 class TestArena(unittest.TestCase):
-    
+
     def test_tick_rate(self):
         arena = Arena(GameMode.Soccar, 120)
         self.assertAlmostEqual(arena.get_tick_rate(), 120.0, 2)
@@ -26,7 +26,7 @@ class TestArena(unittest.TestCase):
     def test_ball(self):
         arena = Arena(GameMode.Soccar, 120)
         ball = arena.get_ball()
-        ball.pos = ball.pos.with_z(1500)
+        ball.pos.z = 1500
         arena.set_ball(ball)
         ball2 = arena.get_ball()
         self.assertEqual(ball2.pos.x, ball.pos.x)
@@ -36,7 +36,7 @@ class TestArena(unittest.TestCase):
     def test_add_car(self):
         arena = Arena(GameMode.Soccar, 120)
         self.assertEqual(arena.num_cars(), 0)
-        car_id = arena.add_car(Team.Blue, CarConfig.Octane)
+        car_id = arena.add_car(Team.Blue, CarConfig.octane())
         self.assertEqual(arena.num_cars(), 1)
 
         car = arena.get_car(car_id)
@@ -57,7 +57,7 @@ class TestArena(unittest.TestCase):
         self.assertEqual(car1.rot_mat.right.x, car.rot_mat.right.x)
         self.assertEqual(car1.rot_mat.right.y, car.rot_mat.right.y)
         self.assertEqual(car1.rot_mat.right.z, car.rot_mat.right.z)
-        
+
         self.assertEqual(car1.rot_mat.up.x, car.rot_mat.up.x)
         self.assertEqual(car1.rot_mat.up.y, car.rot_mat.up.y)
         self.assertEqual(car1.rot_mat.up.z, car.rot_mat.up.z)
@@ -66,7 +66,7 @@ class TestArena(unittest.TestCase):
 
     def test_car_controls(self):
         arena = Arena(GameMode.Soccar, 120)
-        car_id = arena.add_car(Team.Blue, CarConfig.Octane)
+        car_id = arena.add_car(Team.Blue, CarConfig.octane())
 
         car = arena.get_car(car_id)
         car.pos = Vec3(0, 0, 1050)
@@ -96,20 +96,17 @@ class TestArena(unittest.TestCase):
         self.assertEqual(inactive_pads, 0)
 
         print(f"Simulated {ticks / 120}s of game time in {(end_time - start_time) / 1e6}ms real time")
-        
+
     def test_goal_scored_callback(self):
         arena = Arena(GameMode.Soccar, 120)
-        car_id = arena.add_car(Team.Orange, CarConfig.Octane)
+        arena.add_car(Team.Orange, CarConfig.octane())
         ball = arena.get_ball()
 
         ball.pos = Vec3(0., -5119., 184.)
-        ball.vel = Vec3(0., -6600., 0.)
+        ball.vel.y = -6600
 
-        # ball.hit_info.car_id = car_id
-        # ball.hit_info.ball_pos = ball.pos
-        
         arena.set_ball(ball)
-        
+
         scored_team = None
         callback_call_count = 0
         def callback(team):
@@ -117,16 +114,16 @@ class TestArena(unittest.TestCase):
             nonlocal callback_call_count
             scored_team = team
             callback_call_count += 1
-        
+
         arena.set_goal_scored_callback(callback)
-        
+
         arena.step(2)
 
         self.assertEqual(scored_team, Team.Orange)
         self.assertEqual(callback_call_count, 1)
 
         ball2 = arena.get_ball()
-        
+
         self.assertNotEqual(ball, ball2)
 
         arena.step(2)
@@ -134,4 +131,3 @@ class TestArena(unittest.TestCase):
         ball3 = arena.get_ball()
 
         self.assertNotEqual(ball3, ball2)
-        
