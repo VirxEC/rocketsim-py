@@ -1,10 +1,10 @@
 use pyo3::{prelude::*, types::PyTuple};
-use rocketsim_rs::{glam_ext::glam::Quat, CarInfo as CCarInfo, GameState as CGameState};
+use rocketsim_rs::{glam_ext::glam::Quat, CarInfo as CCarInfo, GameState as CGameState, BoostPad as CBoostPad};
 
 use crate::{
-    base::{FromGil, PyDefault, RemoveGil, RotMat},
+    base::{FromGil, PyDefault, RemoveGil, RotMat, Vec3},
     new_gil, new_gil_default,
-    python::{Ball, Car, CarConfig, Team},
+    python::{Ball, BoostPadState, Car, CarConfig, Team},
 };
 
 #[pyclass(get_all, set_all, module = "rocketsim")]
@@ -111,6 +111,25 @@ impl CarInfo {
     }
 }
 
+#[pyclass(get_all, module = "rocketsim")]
+#[derive(Clone, Debug)]
+pub struct BoostPad {
+    pub is_big: bool,
+    pub position: Py<Vec3>,
+    pub state: Py<BoostPadState>,
+}
+
+impl RemoveGil<CBoostPad> for BoostPad {
+    #[inline]
+    fn remove_gil(self, py: Python) -> CBoostPad {
+        CBoostPad {
+            is_big: self.is_big,
+            position: self.position.remove_gil(py),
+            state: self.state.remove_gil(py),
+        }
+    }
+}
+
 #[pyclass(get_all, set_all, module = "rocketsim")]
 #[derive(Clone, Debug)]
 pub struct GameState {
@@ -119,6 +138,7 @@ pub struct GameState {
     pub ball: Py<Ball>,
     pub ball_rot: Py<RotMat>,
     pub cars: Vec<Py<CarInfo>>,
+    // pub pads: Vec<Py<BoostPad>>,
 }
 
 impl FromGil<CGameState> for GameState {

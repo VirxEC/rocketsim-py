@@ -858,6 +858,18 @@ impl From<csim::BoostPadState> for BoostPadState {
     }
 }
 
+impl From<BoostPadState> for csim::BoostPadState {
+    #[inline]
+    fn from(boost_pad_state: BoostPadState) -> Self {
+        Self {
+            is_active: boost_pad_state.is_active,
+            cooldown: boost_pad_state.cooldown,
+            cur_locked_car_id: boost_pad_state.cur_locked_car_id,
+            prev_locked_car_id: boost_pad_state.prev_locked_car_id,
+        }
+    }
+}
+
 impl From<&BoostPadState> for csim::BoostPadState {
     #[inline]
     fn from(boost_pad_state: &BoostPadState) -> Self {
@@ -969,6 +981,11 @@ impl Arena {
     }
 
     #[inline]
+    fn get_cars(&self) -> Vec<u32> {
+        self.0.get_cars()
+    }
+
+    #[inline]
     fn get_car(&mut self, py: Python, id: u32) -> PyResult<Car> {
         self.0.pin_mut().get_car(id).into_gil(py)
     }
@@ -1019,7 +1036,7 @@ impl Arena {
                 .iter()
                 .flat_map(|&car_id| self.0.pin_mut().get_car_info(car_id).into_gil(py).and_then(|car: CarInfo| Py::new(py, car)))
                 .collect(),
-            // pads: self.iter_pads().collect(),
+            // pads: self.0.iter_pads().collect(),
         })
     }
 
