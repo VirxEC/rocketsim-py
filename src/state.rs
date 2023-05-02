@@ -2,7 +2,7 @@ use pyo3::prelude::*;
 use rocketsim_rs::{glam_ext::glam::Quat, BoostPad as CBoostPad, CarInfo as CCarInfo, GameState as CGameState};
 
 use crate::{
-    base::{FromGil, PyDefault, RemoveGil, RotMat, Vec3},
+    base::{repr_bool, FromGil, PyDefault, RemoveGil, RotMat, Vec3},
     new_gil, new_gil_default,
     python::{Ball, BoostPadState, Car, CarConfig, Team},
 };
@@ -62,10 +62,10 @@ impl CarInfo {
     #[inline]
     fn __repr__(&self, py: Python) -> String {
         format!(
-            "CarInfo(id={}, team={:?}, state={}, config={})",
+            "CarInfo(id={}, team={}, state={}, config={})",
             self.id,
-            self.team,
-            self.state.borrow(py).__str__(),
+            self.team.__repr__(),
+            self.state.borrow(py).__repr__(py),
             self.config.borrow(py).__repr__(py)
         )
     }
@@ -76,6 +76,7 @@ impl CarInfo {
 pub struct BoostPad {
     pub is_big: bool,
     pub position: Py<Vec3>,
+    #[pyo3(set)]
     pub state: Py<BoostPadState>,
 }
 
@@ -123,7 +124,7 @@ impl BoostPad {
     fn __repr__(&self, py: Python) -> String {
         format!(
             "BoostPad(is_big={}, position={}, state={})",
-            self.is_big,
+            repr_bool(self.is_big),
             self.position.borrow(py).__repr__(),
             self.state.borrow(py).__repr__()
         )

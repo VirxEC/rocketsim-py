@@ -7,6 +7,9 @@ class Team(Enum):
     Blue = 0
     Orange = 1
 
+    def __str__(self) -> str: ...
+    def __repr__(self) -> str: ...
+
 class GameMode(Enum):
     Soccar = 0
     TheVoid = 1
@@ -18,8 +21,15 @@ class BallHitInfo:
     tick_count_when_hit: int
     tick_count_when_extra_impulse_applied: int
 
-    def __init__() -> BallHitInfo: ...
+    def __init__(
+        relative_pos_on_ball: Vec3=Vec3(),
+        ball_pos: Vec3=Vec3(),
+        extra_hit_vel: Vec3=Vec3(),
+        tick_count_when_hit: int=0,
+        tick_count_when_extra_impulse_applied: int=0
+    ) -> BallHitInfo: ...
     def __str__(self) -> str: ...
+    def __repr__(self) -> str: ...
 
 class Ball:
     pos: Vec3
@@ -74,8 +84,39 @@ class Car:
     ball_hit_info: BallHitInfo
     last_controls: CarControls
 
-    def __init__() -> Car: ...
+    def __init__(
+        pos: Vec3=Vec3(),
+        rot_mat: RotMat=RotMat(),
+        vel: Vec3=Vec3(),
+        ang_vel: Vec3=Vec3(),
+        is_on_ground: bool=False,
+        has_jumped: bool=False,
+        has_double_jumped: bool=False,
+        has_flipped: bool=False,
+        last_rel_dodge_torque: Vec3=Vec3(),
+        jump_time: float=0,
+        flip_time: float=0,
+        is_jumping: bool=False,
+        air_time_since_jump: float=0,
+        boost: float=0,
+        time_spent_boosting: float=0,
+        is_supersonic: bool=False,
+        supersonic_time: float=0,
+        handbrake_val: float=0,
+        is_auto_flipping: bool=False,
+        auto_flip_timer: float=0,
+        auto_flip_torque_scale: float=0,
+        has_contact: bool=False,
+        contact_normal: Vec3=Vec3(),
+        other_car_id: int=0,
+        cooldown_timer: float=0,
+        is_demoed: bool=False,
+        demo_respawn_timer: float=0,
+        ball_hit_info: BallHitInfo=BallHitInfo(),
+        last_controls: CarControls=CarControls()
+    ) -> Car: ...
     def __str__(self) -> str: ...
+    def __repr__(self) -> str: ...
 
     def get_contacting_car(self, arena: Arena) -> Optional[Car]: ...
 
@@ -95,7 +136,13 @@ class CarConfig:
     rear_wheel: WheelPairConfig
     dodge_deadzone: float
 
-    def __init__(hitbox_size: Vec3 = Vec3(), hitbox_pos_offset: Vec3 = Vec3(), front_wheel: WheelPairConfig = WheelPairConfig(), back_wheel: WheelPairConfig = WheelPairConfig(), dodge_deadzone: float = 0.5) -> CarConfig: ...
+    def __init__(
+        hitbox_size: Vec3 = Vec3(),
+        hitbox_pos_offset: Vec3 = Vec3(),
+        front_wheel: WheelPairConfig = WheelPairConfig(),
+        back_wheel: WheelPairConfig = WheelPairConfig(),
+        dodge_deadzone: float = 0.5
+    ) -> CarConfig: ...
     def __str__(self) -> str: ...
     def __repr__(self) -> str: ...
 
@@ -129,7 +176,7 @@ class BoostPadState:
     def __repr__(self) -> str: ...
 
 class Arena:
-    def __init__(gamemode: Optional[GameMode] = GameMode.Soccar, tick_rate: Optional[float] = 120) -> Arena: ...
+    def __init__(gamemode: GameMode=GameMode.Soccar, tick_rate: float=120) -> Arena: ...
     def get_tick_rate(self) -> float: ...
     def get_tick_count(self) -> int: ...
     def step(self, ticks_to_simulate: int = 1): ...

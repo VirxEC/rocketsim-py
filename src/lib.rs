@@ -34,6 +34,6 @@ pynamedmodule! {
     doc: "",
     name: rocketsim,
     funcs: [init],
-    classes: [Vec3, RotMat, GameState, GameState, CarInfo, BoostPadStatic],
+    classes: [Vec3, RotMat, GameState, GameState, CarInfo, BoostPad],
     submodules: [sim]
 }

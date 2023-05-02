@@ -5,9 +5,8 @@ if __name__ == "__main__":
 import unittest
 from time import time_ns
 
-from rocketsim import RotMat, Vec3
-from rocketsim.sim import (Arena, Ball, BallHitInfo, BoostPadState, CarConfig, CarControls,
-                           GameMode, Team, WheelPairConfig)
+from rocketsim import *
+from rocketsim.sim import *
 
 
 class TestArena(unittest.TestCase):
@@ -175,9 +174,11 @@ class TestArena(unittest.TestCase):
 
         self.assertEqual(game_state.cars[0].state.boost, 100)
 
+        # make sure it doesn't throw an error
         arena.set_game_state(game_state)
 
-        game_state2 = arena.get_game_state()
+        # make sure the repr is valid
+        game_state2 = eval(repr(game_state))
 
         self.assertEqual(game_state2.ball.pos.x, game_state.ball.pos.x)
         self.assertEqual(game_state2.ball.pos.y, game_state.ball.pos.y)
@@ -205,8 +206,6 @@ class TestArena(unittest.TestCase):
 
         self.assertEqual(game_state2.cars[0].state.boost, game_state.cars[0].state.boost)
 
-        # print(repr(game_state2))
-
     def init_test(self):
         vec = Vec3(1, z=3)
         self.assertEqual(vec.x, 1)
@@ -232,7 +231,16 @@ class TestArena(unittest.TestCase):
         self.assertEqual(pad.cur_locked_car_id, 0)
         self.assertEqual(pad.prev_locked_car_id, 1)
 
-        # ball_hit_info = BallHitInfo()
+        ball_hit_info = BallHitInfo(Vec3(1, 2, 3), Vec3(4, 5, 6), tick_count_when_hit=7)
+        self.assertEqual(ball_hit_info.relative_pos_on_ball.x, 1)
+        self.assertEqual(ball_hit_info.relative_pos_on_ball.y, 2)
+        self.assertEqual(ball_hit_info.relative_pos_on_ball.z, 3)
+
+        self.assertEqual(ball_hit_info.ball_pos.x, 4)
+        self.assertEqual(ball_hit_info.ball_pos.y, 5)
+        self.assertEqual(ball_hit_info.ball_pos.z, 6)
+
+        self.assertEqual(ball_hit_info.tick_count_when_hit, 7)
 
         ball = Ball(Vec3(1, 2, 3), ang_vel=Vec3(4, 5, 6))
         self.assertEqual(ball.pos.x, 1)
@@ -255,7 +263,20 @@ class TestArena(unittest.TestCase):
         self.assertEqual(controls.boost, True)
         self.assertEqual(controls.jump, True)
 
-        # car = Car()
+        car = Car(Vec3(1, 2, 3), Vec3(4, 5, 6), Vec3(7, 8, 9), is_jumping=True)
+        self.assertEqual(car.pos.x, 1)
+        self.assertEqual(car.pos.y, 2)
+        self.assertEqual(car.pos.z, 3)
+
+        self.assertEqual(car.vel.x, 4)
+        self.assertEqual(car.vel.y, 5)
+        self.assertEqual(car.vel.z, 6)
+
+        self.assertEqual(car.ang_vel.x, 7)
+        self.assertEqual(car.ang_vel.y, 8)
+        self.assertEqual(car.ang_vel.z, 9)
+
+        self.assertEqual(car.is_jumping, True)
 
         wheel_pair_config = WheelPairConfig(25, connection_point_offset=Vec3(1, 2, 3))
         self.assertEqual(wheel_pair_config.radius, 25)

@@ -4,6 +4,15 @@ use rocketsim_rs::{
     math::{Angle, RotMat as CRotMat, Vec3 as CVec3},
 };
 
+#[inline]
+pub fn repr_bool(b: bool) -> &'static str {
+    if b {
+        "True"
+    } else {
+        "False"
+    }
+}
+
 pub trait PyDefault
 where
     Self: Sized,

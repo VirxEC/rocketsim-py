@@ -1,4 +1,4 @@
-from rocketsim.sim import Ball, Car, CarConfig, Team
+from rocketsim.sim import Ball, BoostPadState, Car, CarConfig, Team
 
 class Vec3:
     x: float
@@ -45,5 +45,14 @@ class CarInfo:
     config: CarConfig
 
     def __init__(id: int, team: Team=Team.Blue, state: Car=Car(), config: CarConfig=CarConfig()) -> CarInfo: ...
+    def __str__(self) -> str: ...
+    def __repr__(self) -> str: ...
+
+class BoostPad:
+    is_big: bool
+    position: Vec3
+    state: BoostPadState
+
+    def __init__(is_big: bool=False, position: Vec3=Vec3(), state: BoostPadState=BoostPadState()) -> BoostPad: ...
     def __str__(self) -> str: ...
     def __repr__(self) -> str: ...

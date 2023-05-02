@@ -30,15 +30,13 @@ for _ in range(1800):
     arena.set_car(car_id, car)
     arena.set_car_controls(car_id, CarControls(boost=True))
 
-    for id in arena.get_cars():
-        arena.get_car(car_id)
-
     for i in range(arena.num_pads()):
-        arena.get_pad_static(i)
-        arena.get_pad_state(i)
+        arena.set_pad_state(i, arena.get_pad_state(i))
 
     arena.step()
 
+    arena.get_tick_count()
+    arena.get_tick_rate()
     arena.get_ball()
 
     for id in arena.get_cars():

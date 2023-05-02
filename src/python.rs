@@ -2,7 +2,7 @@ use pyo3::{exceptions::PyIndexError, prelude::*};
 use rocketsim_rs::{autocxx::prelude::*, cxx::UniquePtr, glam_ext::glam::Quat, sim as csim};
 
 use crate::{
-    base::{FromGil, IntoGil, PyDefault, RemoveGil, RotMat, Vec3},
+    base::{repr_bool, FromGil, IntoGil, PyDefault, RemoveGil, RotMat, Vec3},
     new_gil, new_gil_default,
     state::{BoostPad, CarInfo, GameState},
 };
@@ -32,6 +32,19 @@ impl From<csim::Team> for Team {
             csim::Team::BLUE => Self::Blue,
             csim::Team::ORANGE => Self::Orange,
         }
+    }
+}
+
+#[pymethods]
+impl Team {
+    #[inline]
+    fn __str__(&self) -> String {
+        format!("{self:?}")
+    }
+
+    #[inline]
+    pub fn __repr__(&self) -> String {
+        format!("Team.{self:?}")
     }
 }
 
@@ -110,8 +123,42 @@ impl RemoveGil<csim::BallHitInfo> for &BallHitInfo {
 impl BallHitInfo {
     #[new]
     #[inline]
-    fn __new__(py: Python) -> PyResult<Self> {
-        Self::py_default(py)
+    #[pyo3(signature = (is_valid=false, relative_pos_on_ball=None, ball_pos=None, extra_hit_vel=None, tick_count_when_hit=0, tick_count_when_extra_impulse_applied=0))]
+    fn __new__(
+        py: Python,
+        is_valid: bool,
+        relative_pos_on_ball: Option<Py<Vec3>>,
+        ball_pos: Option<Py<Vec3>>,
+        extra_hit_vel: Option<Py<Vec3>>,
+        tick_count_when_hit: u64,
+        tick_count_when_extra_impulse_applied: u64,
+    ) -> PyResult<Self> {
+        Ok(Self {
+            is_valid,
+            relative_pos_on_ball: relative_pos_on_ball.unwrap_or(new_gil_default!(Vec3, py)),
+            ball_pos: ball_pos.unwrap_or(new_gil_default!(Vec3, py)),
+            extra_hit_vel: extra_hit_vel.unwrap_or(new_gil_default!(Vec3, py)),
+            tick_count_when_hit,
+            tick_count_when_extra_impulse_applied,
+        })
+    }
+
+    #[inline]
+    fn __str__(&self) -> String {
+        format!("{self:?}")
+    }
+
+    #[inline]
+    fn __repr__(&self, py: Python) -> String {
+        format!(
+            "BallHitInfo(is_valid={}, relative_pos_on_ball={}, ball_pos={}, extra_hit_vel={}, tick_count_when_hit={}, tick_count_when_extra_impulse_applied={})",
+            repr_bool(self.is_valid),
+            self.relative_pos_on_ball.borrow(py).__repr__(),
+            self.ball_pos.borrow(py).__repr__(),
+            self.extra_hit_vel.borrow(py).__repr__(),
+            self.tick_count_when_hit,
+            self.tick_count_when_extra_impulse_applied
+        )
     }
 }
 
@@ -491,7 +538,14 @@ impl CarControls {
     fn __repr__(&self) -> String {
         format!(
             "CarControls(throttle={}, steer={}, pitch={}, yaw={}, roll={}, jump={}, boost={}, handbrake={})",
-            self.throttle, self.steer, self.pitch, self.yaw, self.roll, self.jump, self.boost, self.handbrake
+            self.throttle,
+            self.steer,
+            self.pitch,
+            self.yaw,
+            self.roll,
+            repr_bool(self.jump),
+            repr_bool(self.boost),
+            repr_bool(self.handbrake)
         )
     }
 }
@@ -534,15 +588,15 @@ impl PyDefault for Car {
     #[inline]
     fn py_default(py: Python) -> PyResult<Self> {
         Ok(Self {
-            pos: new_gil!(Vec3, py, Vec3::ZERO),
-            rot_mat: new_gil!(RotMat, py, RotMat::identity(py)?),
-            vel: new_gil!(Vec3, py, Vec3::ZERO),
-            ang_vel: new_gil!(Vec3, py, Vec3::ZERO),
+            pos: new_gil_default!(Vec3, py),
+            rot_mat: new_gil_default!(RotMat, py),
+            vel: new_gil_default!(Vec3, py),
+            ang_vel: new_gil_default!(Vec3, py),
             is_on_ground: false,
             has_jumped: false,
             has_double_jumped: false,
             has_flipped: false,
-            last_rel_dodge_torque: new_gil!(Vec3, py, Vec3::ZERO),
+            last_rel_dodge_torque: new_gil_default!(Vec3, py),
             jump_time: 0.0,
             flip_time: 0.0,
             is_jumping: false,
@@ -556,7 +610,7 @@ impl PyDefault for Car {
             auto_flip_timer: 0.0,
             auto_flip_torque_scale: 0.0,
             has_contact: false,
-            contact_normal: new_gil!(Vec3, py, Vec3::ZERO),
+            contact_normal: new_gil_default!(Vec3, py),
             other_car_id: 0,
             cooldown_timer: 0.0,
             is_demoed: false,
@@ -682,13 +736,142 @@ impl RemoveGil<csim::CarState> for Car {
 impl Car {
     #[new]
     #[inline]
-    fn __new__(py: Python) -> PyResult<Self> {
-        Self::py_default(py)
+    #[allow(clippy::too_many_arguments)]
+    #[pyo3(signature = (
+        pos=None,
+        rot_mat=None,
+        vel=None,
+        ang_vel=None,
+        is_on_ground=false,
+        has_jumped=false,
+        has_double_jumped=false,
+        has_flipped=false,
+        last_rel_dodge_torque=None,
+        jump_time=0.,
+        flip_time=0.,
+        is_jumping=false,
+        air_time_since_jump=0.,
+        boost=0.,
+        time_spent_boosting=0.,
+        is_supersonic=false,
+        supersonic_time=0.,
+        handbrake_val=0.,
+        is_auto_flipping=false,
+        auto_flip_timer=0.,
+        auto_flip_torque_scale=0.,
+        has_contact=false,
+        contact_normal=None,
+        other_car_id=0,
+        cooldown_timer=0.,
+        is_demoed=false,
+        demo_respawn_timer=0.,
+        ball_hit_info=None,
+        last_controls=None
+    ))]
+    fn __new__(
+        py: Python,
+        pos: Option<Py<Vec3>>,
+        rot_mat: Option<Py<RotMat>>,
+        vel: Option<Py<Vec3>>,
+        ang_vel: Option<Py<Vec3>>,
+        is_on_ground: bool,
+        has_jumped: bool,
+        has_double_jumped: bool,
+        has_flipped: bool,
+        last_rel_dodge_torque: Option<Py<Vec3>>,
+        jump_time: f32,
+        flip_time: f32,
+        is_jumping: bool,
+        air_time_since_jump: f32,
+        boost: f32,
+        time_spent_boosting: f32,
+        is_supersonic: bool,
+        supersonic_time: f32,
+        handbrake_val: f32,
+        is_auto_flipping: bool,
+        auto_flip_timer: f32,
+        auto_flip_torque_scale: f32,
+        has_contact: bool,
+        contact_normal: Option<Py<Vec3>>,
+        other_car_id: u32,
+        cooldown_timer: f32,
+        is_demoed: bool,
+        demo_respawn_timer: f32,
+        ball_hit_info: Option<Py<BallHitInfo>>,
+        last_controls: Option<Py<CarControls>>,
+    ) -> PyResult<Self> {
+        Ok(Self {
+            pos: pos.unwrap_or(new_gil_default!(Vec3, py)),
+            rot_mat: rot_mat.unwrap_or(new_gil_default!(RotMat, py)),
+            vel: vel.unwrap_or(new_gil_default!(Vec3, py)),
+            ang_vel: ang_vel.unwrap_or(new_gil_default!(Vec3, py)),
+            is_on_ground,
+            has_jumped,
+            has_double_jumped,
+            has_flipped,
+            last_rel_dodge_torque: last_rel_dodge_torque.unwrap_or(new_gil_default!(Vec3, py)),
+            jump_time,
+            flip_time,
+            is_jumping,
+            air_time_since_jump,
+            boost,
+            time_spent_boosting,
+            is_supersonic,
+            supersonic_time,
+            handbrake_val,
+            is_auto_flipping,
+            auto_flip_timer,
+            auto_flip_torque_scale,
+            has_contact,
+            contact_normal: contact_normal.unwrap_or(new_gil_default!(Vec3, py)),
+            other_car_id,
+            cooldown_timer,
+            is_demoed,
+            demo_respawn_timer,
+            ball_hit_info: ball_hit_info.unwrap_or(new_gil_default!(BallHitInfo, py)),
+            last_controls: last_controls.unwrap_or(new_gil_default!(CarControls, py)),
+        })
     }
 
     #[inline]
     pub fn __str__(&self) -> String {
         format!("{self:?}")
+    }
+
+    #[inline]
+    pub fn __repr__(&self, py: Python) -> String {
+        format!(
+            "Car(pos={}, rot_mat={}, vel={}, ang_vel={}, is_on_ground={}, has_jumped={}, has_double_jumped={}, has_flipped={}, last_rel_dodge_torque={}, jump_time={}, flip_time={}, is_jumping={}, air_time_since_jump={}, boost={}, time_spent_boosting={}, is_supersonic={}, supersonic_time={}, handbrake_val={}, is_auto_flipping={}, auto_flip_timer={}, auto_flip_torque_scale={}, has_contact={}, contact_normal={}, other_car_id={}, cooldown_timer={}, is_demoed={}, demo_respawn_timer={}, ball_hit_info={}, last_controls={})",
+            self.pos.borrow(py).__repr__(),
+            self.rot_mat.borrow(py).__repr__(py),
+            self.vel.borrow(py).__repr__(),
+            self.ang_vel.borrow(py).__repr__(),
+            repr_bool(self.is_on_ground),
+            repr_bool(self.has_jumped),
+            repr_bool(self.has_double_jumped),
+            repr_bool(self.has_flipped),
+            self.last_rel_dodge_torque.borrow(py).__repr__(),
+            self.jump_time,
+            self.flip_time,
+            repr_bool(self.is_jumping),
+            self.air_time_since_jump,
+            self.boost,
+            self.time_spent_boosting,
+            repr_bool(self.is_supersonic),
+            self.supersonic_time,
+            self.handbrake_val,
+            repr_bool(self.is_auto_flipping),
+            self.auto_flip_timer,
+            self.auto_flip_torque_scale,
+            repr_bool(self.has_contact),
+            self.contact_normal.borrow(py).__repr__(),
+            self.other_car_id,
+            self.cooldown_timer,
+            repr_bool(self.is_demoed),
+            self.demo_respawn_timer,
+            self.ball_hit_info.borrow(py).__repr__(py),
+            self.last_controls.borrow(py).__repr__()
+        )
     }
 
     #[inline]
@@ -784,7 +967,10 @@ impl BoostPadState {
     pub fn __repr__(&self) -> String {
         format!(
             "BoostPadState(is_active={}, cooldown={}, cur_locked_car_id={}, prev_locked_car_id={})",
-            self.is_active, self.cooldown, self.cur_locked_car_id, self.prev_locked_car_id
+            repr_bool(self.is_active),
+            self.cooldown,
+            self.cur_locked_car_id,
+            self.prev_locked_car_id
         )
     }
 }
@@ -799,7 +985,7 @@ impl PartialEq for Arena {
             && self.0.num_pads() == other.0.num_pads()
             && self.0.get_tick_rate() == other.0.get_tick_rate()
             && self.0.get_tick_count() == other.0.get_tick_count()
-            // && self.0.get_cars().iter().zip(other.0.get_cars().iter()).all(|(a, b)| a == b)
+            && self.0.get_cars().iter().zip(other.0.get_cars().iter()).all(|(a, b)| a == b)
             && self.0.iter_pad_state().zip(other.0.iter_pad_state()).all(|(a, b)| a == b)
     }
 }
