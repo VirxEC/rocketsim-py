@@ -1,4 +1,4 @@
-use pyo3::{prelude::*, types::PyTuple, PyClass};
+use pyo3::{prelude::*, PyClass};
 use rocketsim_rs::{
     glam_ext::glam::{Mat3, Mat3A, Quat, Vec3 as GVec3},
     math::{Angle, RotMat as CRotMat, Vec3 as CVec3},
@@ -160,11 +160,11 @@ impl RemoveGil<Quat> for RotMat {
 impl RotMat {
     #[new]
     #[inline]
-    fn __new__(py: Python, forward: Vec3, right: Vec3, up: Vec3) -> PyResult<Self> {
+    fn __new__(py: Python, forward: Option<Py<Vec3>>, right: Option<Py<Vec3>>, up: Option<Py<Vec3>>) -> PyResult<Self> {
         Ok(Self {
-            forward: new_gil!(Vec3, py, forward),
-            right: new_gil!(Vec3, py, right),
-            up: new_gil!(Vec3, py, up),
+            forward: forward.unwrap_or(new_gil_default!(Vec3, py)),
+            right: right.unwrap_or(new_gil_default!(Vec3, py)),
+            up: up.unwrap_or(new_gil_default!(Vec3, py)),
         })
     }
 
@@ -242,8 +242,6 @@ impl From<Vec3> for CVec3 {
 }
 
 impl Vec3 {
-    const NAMES: [&'static str; 3] = ["x", "y", "z"];
-
     pub const ZERO: Self = Self { x: 0., y: 0., z: 0. };
     pub const X: Self = Self { x: 1., y: 0., z: 0. };
     pub const Y: Self = Self { x: 0., y: 1., z: 0. };
@@ -256,30 +254,11 @@ impl Vec3 {
 
 #[pymethods]
 impl Vec3 {
+    #[inline]
     #[new]
-    #[pyo3(signature = (*args, **kwargs))]
-    fn __new__(args: &PyTuple, kwargs: Option<&PyAny>) -> PyResult<Self> {
-        let mut vals = [None; Self::NAMES.len()];
-
-        for (arg, val) in args.iter().zip(vals.iter_mut()) {
-            if let Ok(item) = arg.extract() {
-                *val = Some(item);
-            }
-        }
-
-        if let Some(kwargs) = kwargs {
-            for (name, val) in Self::NAMES.iter().zip(vals.iter_mut()) {
-                if let Ok(item) = kwargs.get_item(name).and_then(PyAny::extract) {
-                    *val = Some(item);
-                }
-            }
-        }
-
-        Ok(Self {
-            x: vals[0].unwrap_or_default(),
-            y: vals[1].unwrap_or_default(),
-            z: vals[2].unwrap_or_default(),
-        })
+    #[pyo3(signature = (x=0., y=0., z=0.))]
+    fn __new__(x: f32, y: f32, z: f32) -> Self {
+        Self { x, y, z }
     }
 
     #[inline]

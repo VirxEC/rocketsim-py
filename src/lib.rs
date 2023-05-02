@@ -26,7 +26,7 @@ pynamedmodule! {
     doc: "",
     name: sim,
     funcs: [],
-    classes: [Arena, GameMode, Team, WheelPairConfig, CarConfig, Car, Ball, CarControls, BallHitInfo],
+    classes: [Arena, BoostPadState, BoostPadStatic, GameMode, Team, WheelPairConfig, CarConfig, Car, Ball, CarControls, BallHitInfo],
     submodules: []
 }
 
@@ -34,6 +34,6 @@ pynamedmodule! {
     doc: "",
     name: rocketsim,
     funcs: [init],
-    classes: [Vec3, RotMat, GameState],
+    classes: [Vec3, RotMat, GameState, GameState, CarInfo, BoostPadStatic],
     submodules: [sim]
 }

@@ -1,10 +1,10 @@
-use pyo3::{exceptions::PyIndexError, prelude::*, types::PyTuple};
+use pyo3::{exceptions::PyIndexError, prelude::*};
 use rocketsim_rs::{autocxx::prelude::*, cxx::UniquePtr, glam_ext::glam::Quat, sim as csim};
 
 use crate::{
     base::{FromGil, IntoGil, PyDefault, RemoveGil, RotMat, Vec3},
     new_gil, new_gil_default,
-    state::{CarInfo, GameState},
+    state::{BoostPad, CarInfo, GameState},
 };
 
 #[pyclass(module = "rocketsim.sim")]
@@ -167,36 +167,15 @@ impl RemoveGil<csim::BallState> for &Ball {
     }
 }
 
-impl Ball {
-    const NAMES: [&'static str; 3] = ["pos", "vel", "ang_vel"];
-    const ITEM_NONE: Option<Py<Vec3>> = None;
-}
-
 #[pymethods]
 impl Ball {
+    #[inline]
     #[new]
-    #[pyo3(signature = (*args, **kwargs))]
-    fn __new__(py: Python, args: &PyTuple, kwargs: Option<&PyAny>) -> PyResult<Self> {
-        let mut vals = [Self::ITEM_NONE; Self::NAMES.len()];
-
-        for (arg, val) in args.into_iter().zip(vals.iter_mut()) {
-            if let Ok(item) = arg.extract() {
-                *val = Some(item);
-            }
-        }
-
-        if let Some(kwargs) = kwargs {
-            for (name, val) in Self::NAMES.iter().zip(vals.iter_mut()) {
-                if let Ok(item) = kwargs.get_item(name).and_then(PyAny::extract) {
-                    *val = Some(item);
-                }
-            }
-        }
-
+    fn __new__(py: Python, pos: Option<Py<Vec3>>, vel: Option<Py<Vec3>>, ang_vel: Option<Py<Vec3>>) -> PyResult<Self> {
         Ok(Self {
-            pos: vals[0].take().unwrap_or(new_gil!(Vec3, py, Vec3::ZERO)),
-            vel: vals[1].take().unwrap_or(new_gil!(Vec3, py, Vec3::ZERO)),
-            ang_vel: vals[2].take().unwrap_or(new_gil!(Vec3, py, Vec3::ZERO)),
+            pos: pos.unwrap_or(new_gil_default!(Vec3, py)),
+            vel: vel.unwrap_or(new_gil_default!(Vec3, py)),
+            ang_vel: ang_vel.unwrap_or(new_gil_default!(Vec3, py)),
         })
     }
 
@@ -260,43 +239,12 @@ impl FromGil<csim::WheelPairConfig> for WheelPairConfig {
 #[pymethods]
 impl WheelPairConfig {
     #[new]
-    #[pyo3(signature = (*args, **kwargs))]
-    fn __new__(py: Python, args: &PyTuple, kwargs: Option<&PyAny>) -> PyResult<Self> {
-        let mut wheel_radius = None;
-        let mut suspension_rest_length = None;
-        let mut connection_point_offset = None;
-
-        if !args.is_empty() {
-            if let Ok(arg) = args.get_item(0).and_then(PyAny::extract) {
-                wheel_radius = Some(arg);
-
-                if let Ok(arg) = args.get_item(1).and_then(PyAny::extract) {
-                    suspension_rest_length = Some(arg);
-
-                    if let Ok(arg) = args.get_item(2).and_then(PyAny::extract) {
-                        connection_point_offset = Some(arg);
-                    }
-                }
-            }
-        }
-
-        if let Some(kwargs) = kwargs {
-            if let Ok(x) = kwargs.get_item("wheel_radius").and_then(PyAny::extract) {
-                wheel_radius = Some(x);
-            }
-
-            if let Ok(x) = kwargs.get_item("suspension_rest_length").and_then(PyAny::extract) {
-                suspension_rest_length = Some(x);
-            }
-
-            if let Ok(x) = kwargs.get_item("connection_point_offset").and_then(PyAny::extract) {
-                connection_point_offset = Some(x);
-            }
-        }
-
+    #[inline]
+    #[pyo3(signature = (wheel_radius=0., suspension_rest_length=0., connection_point_offset=None))]
+    fn __new__(py: Python, wheel_radius: f32, suspension_rest_length: f32, connection_point_offset: Option<Py<Vec3>>) -> PyResult<Self> {
         Ok(Self {
-            wheel_radius: wheel_radius.unwrap_or_default(),
-            suspension_rest_length: suspension_rest_length.unwrap_or_default(),
+            wheel_radius,
+            suspension_rest_length,
             connection_point_offset: connection_point_offset.unwrap_or(new_gil!(Vec3, py, Vec3::ZERO)),
         })
     }
@@ -382,64 +330,21 @@ impl RemoveGil<csim::CarConfig> for &CarConfig {
 #[pymethods]
 impl CarConfig {
     #[new]
-    #[pyo3(signature = (*args, **kwargs))]
-    fn __new__(py: Python, args: &PyTuple, kwargs: Option<&PyAny>) -> PyResult<Self> {
-        let mut hitbox_size = None;
-        let mut hitbox_pos_offset = None;
-        let mut front_wheels = None;
-        let mut back_wheels = None;
-        let mut dodge_deadzone = None;
-
-        if !args.is_empty() {
-            if let Ok(arg) = args.get_item(0).and_then(PyAny::extract) {
-                hitbox_size = Some(arg);
-
-                if let Ok(arg) = args.get_item(1).and_then(PyAny::extract) {
-                    hitbox_pos_offset = Some(arg);
-
-                    if let Ok(arg) = args.get_item(2).and_then(PyAny::extract) {
-                        front_wheels = Some(arg);
-
-                        if let Ok(arg) = args.get_item(3).and_then(PyAny::extract) {
-                            back_wheels = Some(arg);
-
-                            if let Ok(arg) = args.get_item(4).and_then(PyAny::extract) {
-                                dodge_deadzone = Some(arg);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        if let Some(kwargs) = kwargs {
-            if let Ok(x) = kwargs.get_item("hitbox_size").and_then(PyAny::extract) {
-                hitbox_size = Some(x);
-            }
-
-            if let Ok(x) = kwargs.get_item("hitbox_pos_offset").and_then(PyAny::extract) {
-                hitbox_pos_offset = Some(x);
-            }
-
-            if let Ok(x) = kwargs.get_item("front_wheels").and_then(PyAny::extract) {
-                front_wheels = Some(x);
-            }
-
-            if let Ok(x) = kwargs.get_item("back_wheels").and_then(PyAny::extract) {
-                back_wheels = Some(x);
-            }
-
-            if let Ok(x) = kwargs.get_item("dodge_deadzone").and_then(PyAny::extract) {
-                dodge_deadzone = Some(x);
-            }
-        }
-
+    #[inline]
+    fn __new__(
+        py: Python,
+        hitbox_size: Option<Py<Vec3>>,
+        hitbox_pos_offset: Option<Py<Vec3>>,
+        front_wheels: Option<Py<WheelPairConfig>>,
+        back_wheels: Option<Py<WheelPairConfig>>,
+        dodge_deadzone: Option<f32>,
+    ) -> PyResult<Self> {
         Ok(Self {
-            hitbox_size: hitbox_size.unwrap_or(new_gil!(Vec3, py, Vec3::ZERO)),
-            hitbox_pos_offset: hitbox_pos_offset.unwrap_or(new_gil!(Vec3, py, Vec3::ZERO)),
+            hitbox_size: hitbox_size.unwrap_or(new_gil_default!(Vec3, py)),
+            hitbox_pos_offset: hitbox_pos_offset.unwrap_or(new_gil_default!(Vec3, py)),
             front_wheels: front_wheels.unwrap_or(new_gil_default!(WheelPairConfig, py)),
             back_wheels: back_wheels.unwrap_or(new_gil_default!(WheelPairConfig, py)),
-            dodge_deadzone: dodge_deadzone.unwrap_or_default(),
+            dodge_deadzone: dodge_deadzone.unwrap_or(0.5),
         })
     }
 
@@ -560,46 +465,20 @@ impl From<CarControls> for csim::CarControls {
 
 #[pymethods]
 impl CarControls {
-    const NAMES: [&str; 8] = ["throttle", "steer", "pitch", "yaw", "roll", "jump", "boost", "handbrake"];
-
     #[new]
-    #[pyo3(signature = (*args, **kwargs))]
-    fn new(args: &PyTuple, kwargs: Option<&PyAny>) -> Self {
-        if let Ok(args) = args.get_item(0).and_then(PyAny::extract) {
-            return args;
-        }
-
-        let mut vec = [None; Self::NAMES.len()];
-
-        if let Ok(args) = args.get_item(0).and_then(PyAny::extract::<Vec<f32>>) {
-            vec.iter_mut().zip(args.into_iter()).for_each(|(a, b)| *a = Some(b));
-        } else if let Ok(args) = args.extract::<Vec<f32>>() {
-            vec.iter_mut().zip(args.into_iter()).for_each(|(a, b)| *a = Some(b));
-        } else {
-            for (a, b) in vec.iter_mut().zip(args.into_iter()) {
-                if let Ok(x) = b.extract() {
-                    *a = Some(x);
-                }
-            }
-        }
-
-        if let Some(kwargs) = kwargs {
-            for (a, b) in vec.iter_mut().zip(Self::NAMES.into_iter()) {
-                if let Ok(x) = kwargs.get_item(b).and_then(PyAny::extract) {
-                    *a = Some(x);
-                }
-            }
-        }
-
+    #[inline]
+    #[allow(clippy::too_many_arguments)]
+    #[pyo3(signature = (throttle=0., steer=0., pitch=0., yaw=0., roll=0., jump=false, boost=false, handbrake=false))]
+    fn new(throttle: f32, steer: f32, pitch: f32, yaw: f32, roll: f32, jump: bool, boost: bool, handbrake: bool) -> Self {
         Self {
-            throttle: vec[0].unwrap_or_default(),
-            steer: vec[1].unwrap_or_default(),
-            pitch: vec[2].unwrap_or_default(),
-            yaw: vec[3].unwrap_or_default(),
-            roll: vec[4].unwrap_or_default(),
-            jump: vec[5].unwrap_or_default() as u8 != 0,
-            boost: vec[6].unwrap_or_default() as u8 != 0,
-            handbrake: vec[7].unwrap_or_default() as u8 != 0,
+            throttle,
+            steer,
+            pitch,
+            yaw,
+            roll,
+            jump,
+            boost,
+            handbrake,
         }
     }
 
@@ -824,13 +703,13 @@ impl Car {
 
 #[pyclass(get_all, frozen, module = "rocketsim.sim")]
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct BoostPad {
+pub struct BoostPadStatic {
     pos: Vec3,
     is_big: bool,
 }
 
 #[pymethods]
-impl BoostPad {
+impl BoostPadStatic {
     #[inline]
     fn __str__(&self) -> String {
         format!("{self:?}")
@@ -886,6 +765,7 @@ impl From<&BoostPadState> for csim::BoostPadState {
 impl BoostPadState {
     #[new]
     #[inline]
+    #[pyo3(signature = (is_active=true, cooldown=0., cur_locked_car_id=0, prev_locked_car_id=0))]
     fn __new__(is_active: bool, cooldown: f32, cur_locked_car_id: u32, prev_locked_car_id: u32) -> Self {
         Self {
             is_active,
@@ -901,9 +781,9 @@ impl BoostPadState {
     }
 
     #[inline]
-    fn __repr__(&self) -> String {
+    pub fn __repr__(&self) -> String {
         format!(
-            "BoostPadState({}, {}, {}, {})",
+            "BoostPadState(is_active={}, cooldown={}, cur_locked_car_id={}, prev_locked_car_id={})",
             self.is_active, self.cooldown, self.cur_locked_car_id, self.prev_locked_car_id
         )
     }
@@ -928,8 +808,9 @@ impl PartialEq for Arena {
 impl Arena {
     #[new]
     #[inline]
-    fn __new__(gamemode: Option<GameMode>, tick_rate: Option<f32>) -> Self {
-        Self(csim::Arena::new(gamemode.unwrap_or_default().into(), tick_rate.unwrap_or(120.)).within_unique_ptr())
+    #[pyo3(signature = (gamemode = GameMode::Soccar, tick_rate=120.))]
+    fn __new__(gamemode: GameMode, tick_rate: f32) -> Self {
+        Self(csim::Arena::new(gamemode.into(), tick_rate).within_unique_ptr())
     }
 
     #[inline]
@@ -1006,8 +887,8 @@ impl Arena {
     }
 
     #[inline]
-    fn get_pad_static(&self, index: usize) -> BoostPad {
-        BoostPad {
+    fn get_pad_static(&self, index: usize) -> BoostPadStatic {
+        BoostPadStatic {
             pos: self.0.get_pad_pos(index).into(),
             is_big: self.0.get_pad_is_big(index),
         }
@@ -1034,9 +915,13 @@ impl Arena {
                 .0
                 .GetCars()
                 .iter()
-                .flat_map(|&car_id| self.0.pin_mut().get_car_info(car_id).into_gil(py).and_then(|car: CarInfo| Py::new(py, car)))
-                .collect(),
-            // pads: self.0.iter_pads().collect(),
+                .map(|&car_id| self.0.pin_mut().get_car_info(car_id).into_gil(py).and_then(|car: CarInfo| Py::new(py, car)))
+                .collect::<Result<_, _>>()?,
+            pads: self
+                .0
+                .iter_pads()
+                .map(|pad| pad.into_gil(py).and_then(|pad: BoostPad| Py::new(py, pad)))
+                .collect::<Result<_, _>>()?,
         })
     }
 

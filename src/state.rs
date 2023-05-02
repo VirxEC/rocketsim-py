@@ -1,5 +1,5 @@
-use pyo3::{prelude::*, types::PyTuple};
-use rocketsim_rs::{glam_ext::glam::Quat, CarInfo as CCarInfo, GameState as CGameState, BoostPad as CBoostPad};
+use pyo3::prelude::*;
+use rocketsim_rs::{glam_ext::glam::Quat, BoostPad as CBoostPad, CarInfo as CCarInfo, GameState as CGameState};
 
 use crate::{
     base::{FromGil, PyDefault, RemoveGil, RotMat, Vec3},
@@ -43,52 +43,12 @@ impl RemoveGil<CCarInfo> for &CarInfo {
 #[pymethods]
 impl CarInfo {
     #[new]
-    #[pyo3(signature = (*args, **kwargs))]
-    fn __new__(py: Python, args: &PyTuple, kwargs: Option<&PyAny>) -> PyResult<Self> {
-        let mut id = None;
-        let mut team = None;
-        let mut state = None;
-        let mut config = None;
-
-        if !args.is_empty() {
-            if let Ok(val) = args.get_item(0).and_then(PyAny::extract) {
-                id = Some(val);
-
-                if let Ok(val) = args.get_item(1).and_then(PyAny::extract) {
-                    team = Some(val);
-
-                    if let Ok(val) = args.get_item(2).and_then(PyAny::extract) {
-                        state = Some(val);
-
-                        if let Ok(val) = args.get_item(3).and_then(PyAny::extract) {
-                            config = Some(val);
-                        }
-                    }
-                }
-            }
-        }
-
-        if let Some(kwargs) = kwargs {
-            if let Ok(val) = kwargs.get_item("id").and_then(PyAny::extract) {
-                id = Some(val);
-            }
-
-            if let Ok(val) = kwargs.get_item("team").and_then(PyAny::extract) {
-                team = Some(val);
-            }
-
-            if let Ok(val) = kwargs.get_item("state").and_then(PyAny::extract) {
-                state = Some(val);
-            }
-
-            if let Ok(val) = kwargs.get_item("config").and_then(PyAny::extract) {
-                config = Some(val);
-            }
-        }
-
+    #[inline]
+    #[pyo3(signature = (id, team=Team::Blue, state=None, config=None))]
+    fn __new__(py: Python, id: u32, team: Team, state: Option<Py<Car>>, config: Option<Py<CarConfig>>) -> PyResult<Self> {
         Ok(Self {
-            id: id.unwrap_or(1),
-            team: team.unwrap_or_default(),
+            id,
+            team,
             state: state.unwrap_or(new_gil_default!(Car, py)),
             config: config.unwrap_or(new_gil_default!(CarConfig, py)),
         })
@@ -119,6 +79,17 @@ pub struct BoostPad {
     pub state: Py<BoostPadState>,
 }
 
+impl FromGil<CBoostPad> for BoostPad {
+    #[inline]
+    fn from_gil(py: Python, obj: CBoostPad) -> PyResult<Self> {
+        Ok(BoostPad {
+            is_big: obj.is_big,
+            position: new_gil!(Vec3, py, obj.position),
+            state: new_gil!(BoostPadState, py, obj.state),
+        })
+    }
+}
+
 impl RemoveGil<CBoostPad> for BoostPad {
     #[inline]
     fn remove_gil(self, py: Python) -> CBoostPad {
@@ -130,6 +101,35 @@ impl RemoveGil<CBoostPad> for BoostPad {
     }
 }
 
+#[pymethods]
+impl BoostPad {
+    #[new]
+    #[inline]
+    #[pyo3(signature = (is_big=false, position=None, state=None))]
+    fn __new__(py: Python, is_big: bool, position: Option<Py<Vec3>>, state: Option<Py<BoostPadState>>) -> PyResult<Self> {
+        Ok(Self {
+            is_big,
+            position: position.unwrap_or(new_gil_default!(Vec3, py)),
+            state: state.unwrap_or(new_gil_default!(BoostPadState, py)),
+        })
+    }
+
+    #[inline]
+    fn __str__(&self) -> String {
+        format!("{self:?}")
+    }
+
+    #[inline]
+    fn __repr__(&self, py: Python) -> String {
+        format!(
+            "BoostPad(is_big={}, position={}, state={})",
+            self.is_big,
+            self.position.borrow(py).__repr__(),
+            self.state.borrow(py).__repr__()
+        )
+    }
+}
+
 #[pyclass(get_all, set_all, module = "rocketsim")]
 #[derive(Clone, Debug)]
 pub struct GameState {
@@ -138,20 +138,7 @@ pub struct GameState {
     pub ball: Py<Ball>,
     pub ball_rot: Py<RotMat>,
     pub cars: Vec<Py<CarInfo>>,
-    // pub pads: Vec<Py<BoostPad>>,
-}
-
-impl FromGil<CGameState> for GameState {
-    #[inline]
-    fn from_gil(py: Python, state: CGameState) -> PyResult<Self> {
-        Ok(Self {
-            tick_rate: state.tick_rate,
-            tick_count: state.tick_count,
-            ball: new_gil!(Ball, py, state.ball),
-            ball_rot: new_gil!(RotMat, py, Quat::from_array(state.ball_rot)),
-            cars: state.cars.into_iter().flat_map(|car| CarInfo::from_gil(py, car)).flat_map(|car| Py::new(py, car)).collect(),
-        })
-    }
+    pub pads: Vec<Py<BoostPad>>,
 }
 
 impl RemoveGil<CGameState> for GameState {
@@ -171,64 +158,24 @@ impl RemoveGil<CGameState> for GameState {
 #[pymethods]
 impl GameState {
     #[new]
-    #[pyo3(signature = (*args, **kwargs))]
-    fn __new__(py: Python, args: &PyTuple, kwargs: Option<&PyAny>) -> PyResult<Self> {
-        let mut tick_count = None;
-        let mut tick_rate = None;
-        let mut ball = None;
-        let mut ball_rot = None;
-        let mut cars = None;
-
-        if !args.is_empty() {
-            if let Ok(val) = args.get_item(0).and_then(PyAny::extract) {
-                tick_count = Some(val);
-
-                if let Ok(val) = args.get_item(1).and_then(PyAny::extract) {
-                    tick_rate = Some(val);
-
-                    if let Ok(val) = args.get_item(2).and_then(PyAny::extract) {
-                        ball = Some(val);
-
-                        if let Ok(val) = args.get_item(3).and_then(PyAny::extract) {
-                            ball_rot = Some(val);
-
-                            if let Ok(val) = args.get_item(4).and_then(PyAny::extract) {
-                                cars = Some(val);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        if let Some(kwargs) = kwargs {
-            if let Ok(val) = kwargs.get_item("tick_count").and_then(PyAny::extract) {
-                tick_count = Some(val);
-            }
-
-            if let Ok(val) = kwargs.get_item("tick_rate").and_then(PyAny::extract) {
-                tick_rate = Some(val);
-            }
-
-            if let Ok(val) = kwargs.get_item("ball").and_then(PyAny::extract) {
-                ball = Some(val);
-            }
-
-            if let Ok(val) = kwargs.get_item("ball_rot").and_then(PyAny::extract) {
-                ball_rot = Some(val);
-            }
-
-            if let Ok(val) = kwargs.get_item("cars").and_then(PyAny::extract) {
-                cars = Some(val);
-            }
-        }
-
+    #[inline]
+    #[pyo3(signature = (tick_count=0, tick_rate=120., ball=None, ball_rot=None, cars=Vec::new(), pads=Vec::new()))]
+    fn __new__(
+        py: Python,
+        tick_count: u64,
+        tick_rate: f32,
+        ball: Option<Py<Ball>>,
+        ball_rot: Option<Py<RotMat>>,
+        cars: Vec<Py<CarInfo>>,
+        pads: Vec<Py<BoostPad>>,
+    ) -> PyResult<Self> {
         Ok(Self {
-            tick_rate: tick_rate.unwrap_or_default(),
-            tick_count: tick_count.unwrap_or_default(),
+            tick_rate,
+            tick_count,
             ball: ball.unwrap_or(new_gil_default!(Ball, py)),
             ball_rot: ball_rot.unwrap_or(new_gil_default!(RotMat, py)),
-            cars: cars.unwrap_or_default(),
+            cars,
+            pads,
         })
     }
 
@@ -240,12 +187,13 @@ impl GameState {
     #[inline]
     fn __repr__(&self, py: Python) -> String {
         format!(
-            "GameState(tick_count={}, tick_rate={}, ball={}, ball_rot={}, cars=[{}])",
+            "GameState(tick_count={}, tick_rate={}, ball={}, ball_rot={}, cars=[{}], pads=[{}])",
             self.tick_count,
             self.tick_rate,
             self.ball.borrow(py).__repr__(py),
             self.ball_rot.borrow(py).__repr__(py),
             self.cars.iter().map(|car| car.borrow(py).__repr__(py)).collect::<Vec<_>>().join(", "),
+            self.pads.iter().map(|pad| pad.borrow(py).__repr__(py)).collect::<Vec<_>>().join(", ")
         )
     }
 }

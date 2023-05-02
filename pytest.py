@@ -6,7 +6,9 @@ import unittest
 from time import time_ns
 
 from rocketsim import RotMat, Vec3
-from rocketsim.sim import Arena, CarConfig, CarControls, GameMode, Team
+from rocketsim.sim import (Arena, Ball, BallHitInfo, BoostPadState, CarConfig, CarControls,
+                           GameMode, Team, WheelPairConfig)
+
 
 class TestArena(unittest.TestCase):
 
@@ -138,16 +140,16 @@ class TestArena(unittest.TestCase):
 
         game_state = arena.get_game_state()
 
-        game_state.ball.pos = Vec3(0., -5119., 184.)
+        game_state.ball.pos = Vec3(0., -5119, 184)
         game_state.ball.vel.y = -6600
 
         self.assertEqual(game_state.ball.pos.x, 0.)
-        self.assertEqual(game_state.ball.pos.y, -5119.)
-        self.assertEqual(game_state.ball.pos.z, 184.)
+        self.assertEqual(game_state.ball.pos.y, -5119)
+        self.assertEqual(game_state.ball.pos.z, 184)
 
-        self.assertEqual(game_state.ball.vel.x, 0.)
-        self.assertEqual(game_state.ball.vel.y, -6600.)
-        self.assertEqual(game_state.ball.vel.z, 0.)
+        self.assertEqual(game_state.ball.vel.x, 0)
+        self.assertEqual(game_state.ball.vel.y, -6600)
+        self.assertEqual(game_state.ball.vel.z, 0)
 
         car = game_state.cars[0]
         car.state.pos = Vec3(0, 0, 1050)
@@ -179,7 +181,6 @@ class TestArena(unittest.TestCase):
 
         self.assertEqual(game_state2.ball.pos.x, game_state.ball.pos.x)
         self.assertEqual(game_state2.ball.pos.y, game_state.ball.pos.y)
-        # test will fail without rounding due to floating point error
         self.assertEqual(round(game_state2.ball.pos.z, 4), game_state.ball.pos.z)
 
         self.assertEqual(game_state2.ball.vel.x, game_state.ball.vel.x)
@@ -205,3 +206,79 @@ class TestArena(unittest.TestCase):
         self.assertEqual(game_state2.cars[0].state.boost, game_state.cars[0].state.boost)
 
         # print(repr(game_state2))
+
+    def init_test(self):
+        vec = Vec3(1, z=3)
+        self.assertEqual(vec.x, 1)
+        self.assertEqual(vec.y, 0)
+        self.assertEqual(vec.z, 3)
+
+        rotmat = RotMat(Vec3(1, 2, 3), up=Vec3(7, 8, 9))
+        self.assertEqual(rotmat.forward.x, 1)
+        self.assertEqual(rotmat.forward.y, 2)
+        self.assertEqual(rotmat.forward.z, 3)
+
+        self.assertEqual(rotmat.right.x, 0)
+        self.assertEqual(rotmat.right.y, 0)
+        self.assertEqual(rotmat.right.z, 0)
+
+        self.assertEqual(rotmat.up.x, 7)
+        self.assertEqual(rotmat.up.y, 8)
+        self.assertEqual(rotmat.up.z, 9)
+
+        pad = BoostPadState(False, 2, prev_locked_car_id=1)
+        self.assertEqual(pad.is_active, False)
+        self.assertEqual(pad.cooldown, 2)
+        self.assertEqual(pad.cur_locked_car_id, 0)
+        self.assertEqual(pad.prev_locked_car_id, 1)
+
+        # ball_hit_info = BallHitInfo()
+
+        ball = Ball(Vec3(1, 2, 3), ang_vel=Vec3(4, 5, 6))
+        self.assertEqual(ball.pos.x, 1)
+        self.assertEqual(ball.pos.y, 2)
+        self.assertEqual(ball.pos.z, 3)
+
+        self.assertEqual(ball.vel.x, 0)
+        self.assertEqual(ball.vel.y, 0)
+        self.assertEqual(ball.vel.z, 0)
+
+        self.assertEqual(ball.ang_vel.x, 4)
+        self.assertEqual(ball.ang_vel.y, 5)
+        self.assertEqual(ball.ang_vel.z, 6)
+
+        controls = CarControls(0.5, 0, 0.6, boost=True, jump=True)
+
+        self.assertEqual(controls.throttle, 0.5)
+        self.assertEqual(controls.steer, 0)
+        self.assertEqual(controls.pitch, 0.6)
+        self.assertEqual(controls.boost, True)
+        self.assertEqual(controls.jump, True)
+
+        # car = Car()
+
+        wheel_pair_config = WheelPairConfig(25, connection_point_offset=Vec3(1, 2, 3))
+        self.assertEqual(wheel_pair_config.radius, 25)
+        self.assertEqual(wheel_pair_config.connection_point_offset.x, 1)
+        self.assertEqual(wheel_pair_config.connection_point_offset.y, 2)
+        self.assertEqual(wheel_pair_config.connection_point_offset.z, 3)
+
+        car_config = CarConfig(Vec3(1, 2, 3), Vec3(), dodge_deadzone=0.75)
+
+        self.assertEqual(car_config.hitbox_size.x, 1)
+        self.assertEqual(car_config.hitbox_size.y, 2)
+        self.assertEqual(car_config.hitbox_size.z, 3)
+
+        self.assertEqual(car_config.hitbox_pos_offset.x, 0)
+        self.assertEqual(car_config.hitbox_pos_offset.y, 0)
+        self.assertEqual(car_config.hitbox_pos_offset.z, 0)
+
+        self.assertEqual(car_config.dodge_deadzone, 0.75)
+
+        static = BoostPadState(False, 2, prev_locked_car_id=1)
+
+        self.assertEqual(static.is_active, False)
+        self.assertEqual(static.cooldown, 2)
+        self.assertEqual(static.cur_locked_car_id, 0)
+        self.assertEqual(static.prev_locked_car_id, 1)
+
